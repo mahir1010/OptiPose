@@ -1,0 +1,150 @@
+import math
+from random import randint, sample, uniform
+
+import numpy as np
+import scipy
+
+from OptiPose import MAGIC_NUMBER
+
+
+def aug_alternate_missing(dataset, BLANK):
+    if randint(1, 2) == 1:
+        missing_index = list(range(1, len(dataset) + 1, 2))
+    else:
+        missing_index = list(range(0, len(dataset) + 1, 2))
+    for idx in range(len(dataset)):
+        if idx in missing_index:
+            dataset[idx] = [BLANK.copy() for i in range(len(dataset[0]))]
+    mask = [len(missing_index) for kp in range(len(dataset[0]))]
+    return dataset, mask
+
+
+def aug_clusters_missing(dataset, BLANK):
+    n_poses = len(dataset)
+    n_kps = len(dataset[0])
+    cluster_size = randint(2, min(15, n_poses // 3))
+    cluster_start = sample(list(range(0, n_poses, cluster_size)), 1)
+    missing_index = []
+    mask = [0] * n_kps
+    for c in cluster_start:
+        missing_index.extend([m for m in range(c, min(c + cluster_size, len(dataset)))])
+    for idx in range(len(dataset)):
+        if idx in missing_index:
+            dataset[idx] = [BLANK.copy() for i in range(len(dataset[0]))]
+        else:
+            missing_kps = sample(list(range(n_kps)), randint(0, n_kps // 4))
+            dataset[idx] = [dataset[idx][n] if n not in missing_kps else BLANK.copy() for n in range(n_kps)]
+            mask = [mask[i] + 1 if i in missing_kps else mask[i] for i in range(n_kps)]
+    mask = [mask[kp] + len(missing_index) for kp in range(n_kps)]
+    return dataset, mask
+
+
+def aug_auto_encoder(dataset, BLANK):
+    return dataset, [0 for kp in range(len(dataset[0]))]
+
+
+def aug_kp_cluster_missing(dataset, BLANK, complete=None):
+    n_kps = len(dataset[0])
+    n_poses = len(dataset)
+    grouped = randint(1, 2) == 1
+    if randint(1, 200) == 1:
+        missing_kps = sample(list(range(n_kps)), randint(n_kps // 2, n_kps - 1))
+        complete = False
+        cluster_size = n_poses // 2
+    else:
+        complete = randint(1, 2) == 1 if complete is None else complete
+        if grouped:
+            missing_kps = sample(list(range(n_kps)), randint(1, n_kps // 6))
+            temp = [list(range(m, min(m + 3, n_kps))) for m in missing_kps]
+            missing_kps = [item for cluster_kp in temp for item in cluster_kp]
+        else:
+            missing_kps = sample(list(range(n_kps)), randint(1, n_kps // 2))
+        cluster_size = randint(n_poses // 3, n_poses - 5)
+    mask = [0 for kp in range(n_kps)]
+    if complete:
+        missing_index = list(range(n_poses))
+    else:
+        cluster_start = sample(list(range(0, n_poses, cluster_size)), min(1, math.ceil(n_poses / cluster_size)))
+        missing_index = []
+        if grouped:
+            missing_kps = sample(list(range(n_kps)), randint(1, n_kps // 6))
+            temp = [list(range(m, min(m + 3, n_kps))) for m in missing_kps]
+            missing_kps = [item for cluster_kp in temp for item in cluster_kp]
+        else:
+            missing_kps = sample(list(range(n_kps)), randint(1, n_kps - 2))
+        for c in cluster_start:
+            missing_index.extend([m for m in range(c, min(c + cluster_size, len(dataset)))])
+    if complete:
+        for idx in missing_index:
+            dataset[idx] = [dataset[idx][n] if n not in missing_kps else BLANK.copy() for n in range(n_kps)]
+            for n in missing_kps:
+                mask[n] += 1
+    else:
+        for idx in range(n_poses):
+            if idx in missing_index:
+                dataset[idx] = [dataset[idx][n] if n not in missing_kps else BLANK.copy() for n in range(n_kps)]
+                for n in missing_kps:
+                    mask[n] += 1
+            else:
+                random_missing_kps = sample(list(range(n_kps)), randint(0, 3))
+                dataset[idx] = [dataset[idx][n] if n not in random_missing_kps else BLANK.copy() for n in range(n_kps)]
+                mask = [mask[i] + 1 if i in missing_kps else mask[i] for i in range(n_kps)]
+    return dataset, mask
+
+
+def aug_kp_missing(dataset, BLANK):
+    n_kps = len(dataset[0])
+    n_poses = len(dataset)
+    missing_index = sample(list(range(n_poses)), randint(n_poses - 10, n_poses - 5))
+    mask = [0 for kp in range(n_kps)]
+    for idx in missing_index:
+        grouped = randint(1, 10) == 1
+        if grouped:
+            missing_kps = sample(list(range(n_kps)), randint(1, n_kps // 6))
+            temp = [list(range(m, min(m + 3, n_kps))) for m in missing_kps]
+            missing_kps = [item for cluster_kp in temp for item in cluster_kp]
+        else:
+            missing_kps = sample(list(range(n_kps)), randint(1, n_kps // 2))
+        dataset[idx] = [dataset[idx][n] if n not in missing_kps else BLANK.copy() for n in range(n_kps)]
+        for n in missing_kps:
+            mask[n] += 1
+    return dataset, mask
+
+
+def random_rigid_transformation(inputs, labels, rotation=0, min_x=-50, max_x=1100, min_y=-50, max_y=1100,
+                                static_scale=1.0):
+    n_kps = len(labels[0])
+    index = sample(list(range(n_kps)), 3)
+    is_noise = randint(1, 3) != 1
+    noise = [np.array([uniform(-100, 100), uniform(-100, 100), uniform(-100, 100)]) for i in range(n_kps)]
+    rotation_axis = [0, 0, rotation]
+    rotation_mat = scipy.spatial.transform.Rotation.from_euler("XYZ", rotation_axis, degrees=True).as_matrix()
+    x = [99999, -99999]
+    y = [99999, -99999]
+    for row in range(len(inputs)):
+        labels[row] = [static_scale * np.matmul(part, rotation_mat) for part in labels[row]]
+    for row in range(len(labels)):
+        for col, point in enumerate(labels[row]):
+            x[0] = min(x[0], point[0])
+            x[1] = max(x[1], point[0])
+            y[0] = min(y[0], point[1])
+            y[1] = max(y[1], point[1])
+    try:
+        translation_vector = np.array(
+            [-x[0] + randint(min_x, int(max_x - x[1] + x[0])), -y[0] + randint(min_y, int(max_y - y[1] + y[0])),
+             randint(0, 20)])
+    except:
+        for row in labels:
+            print(row)
+        print(x, y)
+        return None, None
+    for row in range(len(labels)):
+        for col in range(len(labels[row])):
+            labels[row][col] = (labels[row][col] + translation_vector).tolist()
+            if not all([v == MAGIC_NUMBER for v in inputs[row][col]]):
+                if is_noise and randint(1, 10) < 3:
+                    added_noise = noise[col]
+                else:
+                    added_noise = np.array([0, 0, 0])
+                inputs[row][col] = (labels[row][col] + added_noise).tolist()
+    return inputs, labels

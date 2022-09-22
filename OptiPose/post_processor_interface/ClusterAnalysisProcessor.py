@@ -1,0 +1,35 @@
+from OptiPose.data_store_interface import DataStoreStats
+from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessorInterface
+
+
+class ClusterAnalysisProcess(PostProcessorInterface):
+    PROCESS_NAME = "Data Analysis"
+
+    def __init__(self, threshold=0.6):
+        self.threshold = threshold
+        super(ClusterAnalysisProcess, self).__init__(None)
+
+    def process(self, data_store):
+        self.data_store = data_store
+        body_parts = self.data_store.body_parts
+        stats = DataStoreStats(body_parts)
+        for index, skeleton in self.data_store.row_iterator():
+            self.progress = int(index / len(self.data_store) * 100)
+            if self.PRINT and self.progress % 10 == 0:
+                print(f'\r{self.progress}% complete', end='')
+            accurate = True
+            for part in body_parts:
+                if skeleton[part] < self.threshold:
+                    stats.update_cluster_info(index, part)
+                    accurate = False
+            if accurate:
+                stats.update_cluster_info(index, '', True)
+        self.data_store.set_stats(stats)
+        self.data_ready = True
+        self.progress = 100
+
+    def get_output(self):
+        if self.data_ready:
+            return self.data_store
+        else:
+            return None
