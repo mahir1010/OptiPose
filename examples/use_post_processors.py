@@ -1,10 +1,11 @@
-from OptiPose.data_store_interface import OptiPoseDataStore3D
+from OptiPose import OptiPoseConfig
+from OptiPose.data_store_interface import FlattenedDataStore
 from OptiPose.post_processor_interface import *
 
 # Define Column names or body parts (order in csv file does not matter)
-body_parts = ["snout", "rightEar", "leftEar", "headBase", "sp1", "sp2", "midpoint", "tailBase", "tailMid", "tailTip"]
+acinoset_config = OptiPoseConfig('./example_configs/AcinoSet.yml')
 
-data_file = OptiPoseDataStore3D(body_parts, 'recon_final.csv')
+data_file = FlattenedDataStore(acinoset_config.body_parts, './AcinoSet_Files/20190227RomeoRun.csv')
 
 # Applying post processors
 
@@ -13,16 +14,16 @@ data_file = OptiPoseDataStore3D(body_parts, 'recon_final.csv')
 # You can check that by <class>.REQUIRES_STATS. If true, you need to run ClusterAnalysisProcessor before it.
 # Some post processors are column based and can be parallelized independently.
 
-# Threshold doesn't matter for OptiPose yet. It only supports binary values.
-post_processors = [MedianDistanceFilterProcess(threshold=0.6, distance_threshold=300),
-                   ClusterAnalysisProcess(threshold=0.6),
-                   LinearInterpolationProcess("snout"),  # Not parallel here
-                   LinearInterpolationProcess("rightEar"),  # Not parallel here
-                   MovingAverageProcess("snout", window_size=3, threshold=0.6)
+# Threshold doesn't matter for OptiPose yet. The data is either valid(>0) or invalid(<=0).
+post_processors = [ClusterAnalysisProcess(threshold=0.6),
+                   LinearInterpolationProcess("nose"),  # Not parallel here
+                   LinearInterpolationProcess("l_eye"),  # Not parallel here
+                   KalmanFilterProcess("l_eye", framerate=acinoset_config.framerate),
+                   MovingAverageProcess("nose", window_size=3, threshold=0.6)
                    ]
 
 for processor in post_processors:
     processor.process(data_file)
     data_file = processor.get_output()
 
-data_file.save(path='recon_final_1.csv')
+data_file.save_file(f'{data_file.base_file_path}_processed.csv')

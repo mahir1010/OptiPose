@@ -8,6 +8,8 @@ class MedianDistanceFilterProcess(PostProcessorInterface):
 
     def process(self, data_store):
         self.data_store = data_store
+        self.data_ready = False
+        self.progress = 0
         for index, skeleton in self.data_store.row_iterator():
             self.progress = int(index / len(self.data_store) * 100)
             for part in self.data_store.body_parts:

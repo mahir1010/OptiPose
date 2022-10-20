@@ -4,6 +4,7 @@ from math import sqrt
 
 import numpy as np
 
+from OptiPose import Part
 from OptiPose.config import MAGIC_NUMBER
 
 
@@ -38,7 +39,6 @@ def alphaBetaFilter(measurement, prevState, dt, velocity=0, acceleration=0, a=0.
 def vectorYawPitch(v1, isDegrees=True):
     multiplier = 57.2958 if isDegrees else 1
     yaw = multiplier * math.atan2(v1[1], v1[0])
-    # yaw = yaw + (multiplier *2 *math.pi) if yaw<0 else yaw
     return np.array([yaw, 0])
 
 
@@ -80,18 +80,20 @@ def convert_to_list(inp):
     return t
 
 
-def convert_to_numpy(input_data):
+def convert_to_numpy(input_data, dimensions=3):
     if type(input_data) == np.ndarray and (input_data.dtype == np.float32 or input_data.dtype == np.float32):
         return input_data
-    if type(input_data) == np.ndarray:
-        input_data = np.array(list(map(convert_to_numpy, input_data)), dtype=np.float32)
+    if type(input_data) == list and len(input_data) == dimensions:
+        return np.array(input_data)
+    # if type(input_data) == np.ndarray:
+    #     input_data = np.array(list(map(convert_to_numpy, input_data)), dtype=np.float32)
     elif type(input_data) == str:
         split = ' '
         if ',' in input_data:
             split = ','
         input_data = np.array(input_data[1:-1].strip().split(split)).astype(np.float32)
     else:
-        input_data = np.array([MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER], dtype=np.float32)
+        input_data = np.array([MAGIC_NUMBER] * dimensions, dtype=np.float32)
     return input_data
 
 
@@ -126,13 +128,34 @@ def offset_deeplabcut_csv(path, parts, offset_x, offset_y):
             sk[part][1] += offset_y
         data.set_skeleton(index, sk, force_insert=True)
         print(f'\r{index}/{len(data)}', end='')
-    data.save_file('/media/mahirp/Storage/RodentVideos/TestVideos/220510/Green_3.csv_data')
+    data.save_file(f'{data.base_file_path}_offset.csv')
+
+
+def convert_numpy_to_datastore(pickled_data: np.ndarray, header_names, flavor, output_path):
+    assert pickled_data.ndim == 3 and pickled_data.shape[1] == len(header_names)
+    from OptiPose.data_store_interface import initialize_datastore_reader
+    datastore = initialize_datastore_reader(header_names, output_path, flavor)
+    for index, row in enumerate(pickled_data):
+        skeleton = datastore.get_skeleton(index)
+        for i, header_name in enumerate(header_names):
+            skeleton[header_name] = Part(row[i], header_name, 1.0)
+        datastore.set_skeleton(index, skeleton)
+    datastore.save_file()
 
 
 if __name__ == "__main__":
-    import yaml
+    # import yaml
+    import pickle
+    import glob
 
-    config = yaml.safe_load(open('/media/mahirp/Storage/RodentVideos/TestVideos/220510/test.yaml', 'r'))
+    # config = yaml.safe_load(open('/media/mahirp/Storage/RodentVideos/TestVideos/220510/test.yaml', 'r'))
+    files = glob.glob('/home/mahirp/Projects/ACINO/*.pickle')
+    acino_bp = ['nose', 'l_eye', 'r_eye', 'neck_base', 'spine', 'tail_base', 'tail1', 'tail2', 'r_shoulder',
+                'r_front_knee', 'r_front_ankle', 'l_shoulder', 'l_front_knee', 'l_front_ankle', 'r_hip', 'r_back_knee',
+                'r_back_ankle', 'l_hip', 'l_back_knee', 'l_back_ankle']
+    for file in files:
+        convert_numpy_to_datastore(np.array(pickle.load(open(file, 'rb'))['positions']), acino_bp, 'flattened',
+                                   file.replace('.pickle', '.csv'))
     # offset_deeplabcut_csv(
     #     '/media/mahirp/Storage/RodentVideos/TestVideos/220510/GreenDLC_effnet_b0_FLIRDLC_GREENAug6shuffle1_70000.csv_data',
     #     config['body_parts'], 0, 110)

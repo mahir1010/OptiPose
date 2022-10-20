@@ -1,0 +1,42 @@
+name: Rodent3D_OptiPose
+
+output_folder: ./
+
+body_parts:
+  - snout
+  - rightEar
+  - leftEar
+  - headBase
+  - sp1
+  - midpoint
+  - sp2
+  - tailBase
+  - tailMid
+  - tailTip
+
+skeleton:
+  - - snout
+    - rightEar
+  - - snout
+    - leftEar
+  - - snout
+    - headBase
+  - - headBase
+    - sp1
+  - - sp1
+    - midpoint
+  - - midpoint
+    - sp2
+  - - sp2
+    - tailBase
+  - - tailBase
+    - tailMid
+  - - tailMid
+    - tailTip
+
+OptiPose:
+  framerate: 60
+  reconstruction_algorithm: auto_subset
+  scale: 1000
+  skip: 0
+  threshold: 0.9

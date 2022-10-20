@@ -25,6 +25,8 @@ def build_pck_metric(n_kps, threshold, per_kp=False):
             y_d = y_d / n_kps * 100
             y_d = tf.reduce_sum(y_d, axis=-1) / tf.reduce_sum(mask, axis=-1)
             return tf.reduce_mean(y_d)
+
+        pck._name = f'pck_{int(threshold * 100)}'
     else:
         @tf.function
         def pck(y_t, y_p):
@@ -46,6 +48,7 @@ def build_pck_metric(n_kps, threshold, per_kp=False):
             mask = tf.cast(tf.logical_not(tf.reduce_all(tf.reduce_all(y_t == 0, axis=-1), axis=-1)), dtype=tf.float32)
             total = tf.reduce_sum(mask, axis=-1, keepdims=True)
             y_d = y_d / total * 100
-            return tf.reduce_mean(tf.reduce_mean(y_d, axis=0), axis=0)
+            return tf.reduce_mean(y_d, axis=0)
 
+        pck._name = f'per_kp_pck_{int(threshold * 100)}'
     return pck

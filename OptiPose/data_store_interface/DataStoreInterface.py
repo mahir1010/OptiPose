@@ -1,3 +1,5 @@
+import os.path
+import pickle
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -12,7 +14,7 @@ class DataStoreInterface(ABC):
     DIMENSIONS = 3
     SEP = ','
 
-    def __init__(self, body_parts, path):
+    def __init__(self, body_parts, path, dimension=3):
         """
         Interface for data reader. This class can be implemented to integrate data files from other toolkits
         Args:
@@ -23,6 +25,10 @@ class DataStoreInterface(ABC):
         self.data = None
         self.path = path
         self.stats = DataStoreStats(body_parts)
+        self.base_file_path = os.path.splitext(self.path)[0]
+        self.DIMENSIONS = dimension
+        if os.path.exists(f'{self.base_file_path}_stats.bin'):
+            self.stats = pickle.load(open(f'{self.base_file_path}_stats.bin', 'rb'))
 
     def get_skeleton(self, index) -> Skeleton:
         if index in self.data.index:
@@ -101,12 +107,13 @@ class DataStoreInterface(ABC):
         if path is None:
             path = self.path
         self.data.sort_index(inplace=True)
-        self.data.to_csv(path)
+        self.data.to_csv(path, sep=self.SEP)
 
     def set_stats(self, stats):
         if stats.register(self.compute_data_hash()):
             del self.stats
             self.stats = stats
+            pickle.dump(self.stats, open(f'{self.base_file_path}_stats.bin', 'wb'))
 
     def build_empty_skeleton(self):
         part_map = {}
@@ -124,7 +131,7 @@ class DataStoreInterface(ABC):
         return int(pd.util.hash_pandas_object(self.data).sum())
 
     def verify_stats(self):
-        return self.compute_data_hash() == self.stats.data_frame_hash
+        return (self.compute_data_hash() == self.stats.data_frame_hash) and (self.stats.body_parts == self.body_parts)
 
     @staticmethod
     @abstractmethod
@@ -132,7 +139,7 @@ class DataStoreInterface(ABC):
         pass
 
     def get_header_rows(self):
-        return [self.data.columns.tolist()]
+        return [self.body_parts]
 
 
 class DataStoreStats:
@@ -179,3 +186,18 @@ class DataStoreStats:
     def iter_accurate_clusters(self):
         for accurate in self.accurate_data_points:
             yield accurate
+
+    def get_accurate_cluster_info(self, bin_width=20, max_bin=100):
+        histogram = {bucket: 0 for bucket in range(bin_width, max_bin + 1, 20)}
+        last_bin = list(histogram.keys())[-1]
+        total = 0
+        for cluster in self.accurate_data_points:
+            width = cluster['end'] - cluster['begin']
+            target_bin = last_bin
+            total += width
+            for key in histogram:
+                if width < key:
+                    target_bin = key
+                    break
+            histogram[target_bin] += 1
+        return len(self.accurate_data_points), histogram, total

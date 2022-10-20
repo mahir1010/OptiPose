@@ -5,9 +5,9 @@ import random
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from OptiPose import Skeleton, Part, DLTrecon, rotate
-from OptiPose.data_store_interface import DataStoreInterface
-from OptiPose.video_reader_interface import BaseVideoReaderInterface
+from OptiPose import Skeleton, Part, DLTrecon, rotate, OptiPoseConfig
+from OptiPose.data_store_interface import DataStoreInterface, initialize_datastore_reader
+from OptiPose.video_reader_interface import BaseVideoReaderInterface, initialize_video_reader
 
 
 def reconstruct_3D(config, views, data_readers: DataStoreInterface, name='recon', threshold=0.95):
@@ -86,22 +86,26 @@ def generate_EasyWand_data(config, csv_maps, static_points):
         writer1.writerow(builder)
 
 
-def compute_invalid_frame_indices(video_reader: BaseVideoReaderInterface, sample_size=8):
-    writer = csv.writer(open(f'{video_reader.path_no_ext}.csv', 'w'))
+def compute_invalid_frame_indices(video_reader: BaseVideoReaderInterface, data_store: DataStoreInterface,
+                                  sample_size=8):
+    writer = csv.writer(open(f'{video_reader.base_file_path}_frame_status.csv', 'w'))
     writer.writerow(['isValid'])
     writer.writerow([1])
     previous_frame = video_reader.next_frame()
     current_frame = video_reader.next_frame()
     while current_frame is not None:
         print(f'\r{video_reader.get_current_index()}/{video_reader.get_number_of_frames()}', end='')
+        index = video_reader.get_current_index()
         x = random.sample(range(current_frame.shape[0]), sample_size)
         y = random.sample(range(current_frame.shape[1]), sample_size)
         if not np.all(previous_frame[x, y] == current_frame[x, y]):
             writer.writerow([1])
         else:
             writer.writerow([0])
+            data_store.delete_skeleton(index)
         previous_frame = current_frame
         current_frame = video_reader.next_frame()
+    data_store.save_file(f'{data_store.base_file_path}_valid_frames.csv')
 
 
 def find_equal_frame(video_reader, reference_frame, sample_size=10):
@@ -128,19 +132,14 @@ def filter_invalid_frames(data_reader: DataStoreInterface, invalid_indices):
     data_reader.save_file('test.csv')
 
 
-def update_alignment_matrices(config):
-    valid_views = []
-    for view in config['views'].values():
-        if 'dlt_coefficients' in view and 'axes' in view and 'origin' in view['axes'] and 'x_max' in view[
-            'axes'] and 'y_max' in view['axes']:
-            valid_views.append(view)
-    if len(valid_views) < 2:
+def update_alignment_matrices(config: OptiPoseConfig, source_views: list):
+    if len(source_views) < 2:
         return False
     try:
-        dlt_coefficients = np.array([camera['dlt_coefficients'] for camera in valid_views])
-        origin_2D = [camera['axes']['origin'] for camera in valid_views]
-        x_max_2D = [camera['axes']['x_max'] for camera in valid_views]
-        y_max_2D = [camera['axes']['y_max'] for camera in valid_views]
+        dlt_coefficients = np.array([config.views[view].dlt_coefficients for view in source_views])
+        origin_2D = [config.views[view].axes['origin'] for view in source_views]
+        x_max_2D = [config.views[view].axes['x_max'] for view in source_views]
+        y_max_2D = [config.views[view].axes['y_max'] for view in source_views]
         origin = Part((DLTrecon(3, len(origin_2D), dlt_coefficients, origin_2D)), "origin", 1)
         x_max = Part((DLTrecon(3, len(x_max_2D), dlt_coefficients, x_max_2D)), "x_max", 1)
         y_max = Part((DLTrecon(3, len(y_max_2D), dlt_coefficients, y_max_2D)), "y_max", 1)
@@ -148,8 +147,8 @@ def update_alignment_matrices(config):
             0].as_matrix()
         origin = Part(rotate(DLTrecon(3, len(origin_2D), dlt_coefficients, origin_2D), rotation_matrix), "origin", 1)
         trans_mat = -origin
-        config['OptiPose']['rotation_matrix'] = rotation_matrix.tolist()
-        config['OptiPose']['translation_matrix'] = trans_mat.tolist()
+        config.rotation_matrix = rotation_matrix
+        config.translation_matrix = trans_mat
     except:
         return False
     return True
@@ -165,13 +164,62 @@ def convert_data_flavor(source: DataStoreInterface, target: DataStoreInterface):
         writer.writerow(target.convert_to_list(index, skeleton))
 
 
-if __name__ == "__main__":
-    import yaml
-    from OptiPose.data_store_interface.DeeplabcutDataStore import DeeplabcutDataStore
-    config = yaml.safe_load(open('/home/mahirp/Projects/Pose Annotator/Resources/220406_calib.yaml', 'r'))
-    data_readers = []
-    csv_map = {}
-    for view in config['views']:
-        view_data = config['views'][view]
-        csv_map[view] = DeeplabcutDataStore(config['body_parts'], view_data['annotation_file'])
-    generate_EasyWand_data(config, csv_map, ['top_left', 'bottom_left', 'bottom_right', 'top_right'])
+def translate_data_store(source: DataStoreInterface, translation_vector: np.array, threshold=0.7):
+    writer = csv.writer(open(f'{source.base_file_path}_translated.csv', 'w'), delimiter=source.SEP)
+    writer.writerows(source.get_header_rows())
+    for index, sk in source.row_iterator():
+        if index % 500 == 0:
+            print(f'\r{index}/{len(source)}', end='')
+        for part in sk:
+            if part > threshold:
+                sk[part.name] = part + translation_vector
+        sk = source.convert_to_list(index, sk)
+        writer.writerow(sk)
+
+
+def remove_duplicate_rows(source: DataStoreInterface):
+    previous_row = None
+    removed = []
+    for index, row in source.row_iterator():
+        if index % 200 == 0:
+            print(f'\r{index}/{len(source)}', end='')
+        if previous_row is not None and row == previous_row:
+            removed.append(index)
+            source.delete_skeleton(index)
+        else:
+            previous_row = row
+    source.save_file(f'{source.base_file_path}_de_duplicated.csv')
+    return removed
+
+
+def filter_from_velocity(datastore: DataStoreInterface, velocity_datastore: DataStoreInterface, threshold):
+    for i in range(len(datastore)):
+        if i % 100 == 0:
+            print(f'\r{i}/{len(datastore)}', end='')
+        for body_part in datastore.body_parts:
+            if max(np.abs(velocity_datastore.get_marker(i, body_part)).tolist()) > threshold:
+                datastore.delete_marker(i, body_part, True)
+    datastore.save_file(f'{datastore.base_file_path}_velocity_filtered.csv')
+
+
+if __name__ == '__main__':
+    import yaml as yml
+
+    config = yml.safe_load(open('/home/mahirp/Projects/Pose Annotator/Resources/220510_1.yaml', 'r'))
+    view = config['views']['Blue']
+    compute_invalid_frame_indices(initialize_video_reader(view['video_file'], 60, 'opencv'),
+                                  initialize_datastore_reader(config['body_parts'], view['annotation_file'],
+                                                              'deeplabcut'))
+    view = config['views']['Pink']
+    compute_invalid_frame_indices(initialize_video_reader(view['video_file'], 60, 'opencv'),
+                                  initialize_datastore_reader(config['body_parts'], view['annotation_file'],
+                                                              'deeplabcut'))
+    view = config['views']['Yellow']
+    compute_invalid_frame_indices(initialize_video_reader(view['video_file'], 60, 'opencv'),
+                                  initialize_datastore_reader(config['body_parts'], view['annotation_file'],
+                                                              'deeplabcut'))
+    # csv_maps={}
+    # for view in config['views']:
+    #     csv_maps[view]=DeeplabcutDataStore(config['body_parts'],config['views'][view]['annotation_file'])
+    # static_points=['top_left','top_right','bottom_left','bottom_right']
+    # generate_EasyWand_data(config, csv_maps, static_points)

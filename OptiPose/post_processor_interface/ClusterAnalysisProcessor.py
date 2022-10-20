@@ -11,12 +11,14 @@ class ClusterAnalysisProcess(PostProcessorInterface):
 
     def process(self, data_store):
         self.data_store = data_store
+        self.data_ready = False
+        self.progress = 0
         body_parts = self.data_store.body_parts
         stats = DataStoreStats(body_parts)
         for index, skeleton in self.data_store.row_iterator():
             self.progress = int(index / len(self.data_store) * 100)
             if self.PRINT and self.progress % 10 == 0:
-                print(f'\r{self.progress}% complete', end='')
+                print(f'\r {self.PROCESS_NAME} {self.progress}% complete', end='')
             accurate = True
             for part in body_parts:
                 if skeleton[part] < self.threshold:

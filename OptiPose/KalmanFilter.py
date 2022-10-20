@@ -11,16 +11,22 @@ class Tracker:
         self.tracker = self.getKalmanFilter(data)
 
     def getKalmanFilter(self, data):
-        kalman = KalmanFilter(len(data) * 2, len(data))
-        kalman.x = np.hstack((data, [0.0, 0.0, 0.0])).astype(np.float)
+        kalman = KalmanFilter(len(data) * 3, len(data))
+        kalman.x = np.hstack((data, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0])).astype(np.float)
         kalman.F = np.array(
-            [[1, 0, 0, self.dt, 0, 0], [0, 1, 0, 0, self.dt, 0], [0, 0, 1, 0, 0, self.dt], [0, 0, 0, 1, 0, 0],
-             [0, 0, 0, 0, 1, 0],
-             [0, 0, 0, 0, 0, 1]])
-        kalman.H = np.array([[1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0]])
+            [[1, 0, 0, self.dt, 0, 0, 0.5 * (self.dt) ** 2, 0, 0],
+             [0, 1, 0, 0, self.dt, 0, 0, 0.5 * (self.dt) ** 2, 0],
+             [0, 0, 1, 0, 0, self.dt, 0, 0, 0.5 * (self.dt) ** 2],
+             [0, 0, 0, 1, 0, 0, self.dt, 0, 0],
+             [0, 0, 0, 0, 1, 0, 0, self.dt, 0],
+             [0, 0, 0, 0, 0, 1, 0, 0, self.dt],
+             [0, 0, 0, 0, 0, 0, 1, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 1, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0, 1]])
+        kalman.H = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0, 0, 0]])
         kalman.P *= 1000
         kalman.R = 0.00001
-        kalman.Q = Q_discrete_white_noise(2, dt=self.dt, var=0.5, block_size=3)
+        kalman.Q = Q_discrete_white_noise(3, dt=self.dt, var=0.5, block_size=3, order_by_dim=False)
         kalman.B = 0
         return kalman
 

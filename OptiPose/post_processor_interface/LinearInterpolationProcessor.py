@@ -12,6 +12,8 @@ class LinearInterpolationProcess(PostProcessorInterface):
 
     def process(self, data_store):
         self.data_store = data_store
+        self.data_ready = False
+        self.progress = 0
         if not self.data_store.verify_stats():
             raise Exception("This process requires data-frame statistics."
                             "\nPlease run ClusterAnalysisProcess before this one")

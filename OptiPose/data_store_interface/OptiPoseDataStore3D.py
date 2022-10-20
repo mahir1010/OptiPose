@@ -17,14 +17,14 @@ class OptiPoseDataStore3D(DataStoreInterface):
         if path is None:
             path = self.path
         self.data.sort_index(inplace=True)
-        self.data.to_csv(path, index=False, sep=';')
+        self.data.to_csv(path, index=False, sep=self.SEP)
 
     def delete_marker(self, index, name, force_remove=False):
         if force_remove or index in self.data.index:
             self.data.loc[index, name] = pd.NA
 
     def set_behaviour(self, index, behaviour: str) -> None:
-        self.data[index, 'behaviour'] = behaviour
+        self.data.loc[index, 'behaviour'] = behaviour
 
     def get_behaviour(self, index) -> str:
         if index in self.data.index:
@@ -33,10 +33,13 @@ class OptiPoseDataStore3D(DataStoreInterface):
             return ""
 
     def get_keypoint_slice(self, slice_indices: list, name: str) -> np.ndarray:
-        return self.data.loc[slice_indices[0]:slice_indices[1], name].map(lambda x: self.build_part(x, name)).to_numpy()
+        return self.data.loc[slice_indices[0]:slice_indices[1] - 1, name].map(
+            lambda x: self.build_part(x, name)).to_numpy()
 
     def set_keypoint_slice(self, slice_indices: list, name: str, data: np.ndarray) -> None:
-        self.data.loc[slice_indices[0]:slice_indices[1], name] = data[:]
+        place_holder = np.empty((data.shape[0],), dtype=np.object)
+        place_holder[:] = data.tolist()
+        self.data.loc[slice_indices[0]:slice_indices[1] - 1, name] = place_holder
 
     def get_marker(self, index, name) -> Part:
         if index in self.data.index:
@@ -66,7 +69,7 @@ class OptiPoseDataStore3D(DataStoreInterface):
     def __init__(self, body_parts, path):
         super(OptiPoseDataStore3D, self).__init__(body_parts, path)
         self.path = path
-        if os.path.exists(path):
+        if path is not None and os.path.exists(path):
             self.data = pd.read_csv(path, sep=';')
         else:
             self.data = pd.DataFrame(columns=body_parts)

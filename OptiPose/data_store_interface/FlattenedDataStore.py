@@ -8,29 +8,33 @@ from OptiPose.data_store_interface.DataStoreInterface import DataStoreInterface
 from OptiPose.skeleton import Skeleton, Part
 
 
-class DannceDataStore(DataStoreInterface):
-    FLAVOR = "dannce"
+class FlattenedDataStore(DataStoreInterface):
+    FLAVOR = "flattened"
     DIMENSIONS = 3
 
-    def __init__(self, body_parts, path):
+    def __init__(self, body_parts, path, dimension=3):
         """
-        Plugin to support DANNCE data file, converted from the matlab data file
+        Plugin to support flattened data file.Expects a csv file where all dimensions are flattened.
+        The header should contain 3 consecutive columns per keypoint.
+        Ex. Snout_1,Snout_2,Snout_3 for x,y, and z values
         Args:
             body_parts: list of column names
             path: path to file
         """
-        super(DannceDataStore, self).__init__(body_parts, path)
+        super(FlattenedDataStore, self).__init__(body_parts, path, dimension=dimension)
         self.path = path
-        if os.path.exists(path):
+        if path is not None and os.path.exists(path):
             self.data = pd.read_csv(path, sep=',')
         else:
-            self.data = pd.DataFrame(columns=body_parts)
+            columns = []
+            for part in body_parts:
+                columns.extend([f"{part}_{i}" for i in range(1, self.DIMENSIONS + 1)])
+            self.data = pd.DataFrame(columns=columns)
         for part in body_parts:
             for dim in range(1, self.DIMENSIONS + 1):
                 if f"{part}_{dim}" not in self.data.columns:
                     # self.data[part] = f"[{MAGIC_NUMBER},{MAGIC_NUMBER},{MAGIC_NUMBER}]"
                     self.data[f"{part}_{dim}"] = ""
-
         if "behaviour" not in self.data.columns:
             self.data['behaviour'] = ""
         if not self.data.index.is_monotonic_increasing:
@@ -40,14 +44,14 @@ class DannceDataStore(DataStoreInterface):
         if path is None:
             path = self.path
         self.data.sort_index(inplace=True)
-        self.data.to_csv(path, index=False, sep=';')
+        self.data.to_csv(path, index=False, sep=self.SEP)
 
     def delete_marker(self, index, name, force_remove=False):
         if force_remove or index in self.data.index:
             self.data.loc[index, [f"{name}_{i}" for i in range(1, self.DIMENSIONS + 1)]] = pd.NA
 
     def set_behaviour(self, index, behaviour: str) -> None:
-        self.data[index, 'behaviour'] = behaviour
+        self.data.loc[index, 'behaviour'] = behaviour
 
     def get_behaviour(self, index) -> str:
         if index in self.data.index:
@@ -56,13 +60,13 @@ class DannceDataStore(DataStoreInterface):
             return ""
 
     def get_keypoint_slice(self, slice_indices: list, name: str) -> np.ndarray:
-        return self.data.loc[slice_indices[0]:slice_indices[1],
+        return self.data.loc[slice_indices[0]:slice_indices[1] - 1,
                [f"{name}_{i}" for i in range(1, self.DIMENSIONS + 1)]].apply(
             lambda x: self.build_part(x, name), axis=1).to_numpy()
 
     def set_keypoint_slice(self, slice_indices: list, name: str, data: np.ndarray) -> None:
         for i in range(1, self.DIMENSIONS + 1):
-            self.data.loc[slice_indices[0]:slice_indices[1], f"{name}_{i}"] = [d[i - 1] for d in data]
+            self.data.loc[slice_indices[0]:slice_indices[1] - 1, f"{name}_{i}"] = [d[i - 1] for d in data]
 
     def get_marker(self, index, name) -> Part:
         if index in self.data.index:
@@ -76,7 +80,7 @@ class DannceDataStore(DataStoreInterface):
     def set_marker(self, index, part: Part) -> None:
         name = part.name
         for i in range(1, part.shape[0] + 1):
-            self.data.loc[index, f"{name}_{i}"] = part[i - 1]
+            self.data.loc[index, f"{name}_{i}"] = part[i - 1] if part[i - 1] != MAGIC_NUMBER else pd.NA
         if not self.data.index.is_monotonic_increasing:
             self.data.sort_index(inplace=True)
 
@@ -96,6 +100,16 @@ class DannceDataStore(DataStoreInterface):
         if any(np.isnan(pt)):
             pt = np.array([MAGIC_NUMBER] * self.DIMENSIONS)
         return Part(pt, name, float(not all(pt == MAGIC_NUMBER)))
+
+    def get_header_rows(self):
+        header = []
+        for part in self.body_parts:
+            header.extend([f'{part}_{i + 1}' for i in range(self.DIMENSIONS)])
+        return [header]
+
+    def part_iterator(self, part):
+        for index, row in self.data.loc[:, [f'{part}_{i + 1}' for i in range(self.DIMENSIONS)]].iterrows():
+            yield index, self.build_part(row, part)
 
     @staticmethod
     def convert_to_list(index, skeleton, threshold=0.8):

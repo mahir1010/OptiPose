@@ -14,6 +14,8 @@ class MovingAverageProcess(PostProcessorInterface):
     def process(self, data_store):
         self.data_store = data_store
         average_window = []
+        self.data_ready = False
+        self.progress = 0
         for index, point in self.data_store.part_iterator(self.target_column):
             self.progress = int(index / len(self.data_store) * 100)
             if point < self.threshold:

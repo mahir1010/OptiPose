@@ -10,41 +10,43 @@ class KalmanFilterProcess(PostProcessorInterface):
         self.threshold = threshold
         self.skip = skip
         self.dt = float(1 / framerate)
-        self.tracker = None
 
     def process(self, data_store):
         self.data_store = data_store
+        self.data_ready = False
+        self.progress = 0
+        tracker = None
         for index, point in self.data_store.part_iterator(self.target_column):
             self.progress = int(index / len(self.data_store) * 100)
             if self.skip:
                 if point < self.threshold:
-                    self.tracker = None
+                    tracker = None
                     # self.data.append(None)
                 else:
-                    if self.tracker is None:
-                        self.tracker = Tracker(point, self.dt)
+                    if tracker is None:
+                        tracker = Tracker(point, self.dt)
                         # self.data.append(point.tolist())
                     else:
-                        # self.data.append(self.tracker.update(point).tolist())
-                        point[:3] = self.tracker.update(point).tolist()
+                        # self.data.append(tracker.update(point).tolist())
+                        point[:3] = tracker.update(point).tolist()
                         self.data_store.set_marker(index, point)
             else:
                 if point < self.threshold:
-                    if self.tracker is not None:
-                        p = self.tracker.get_next_pred()
-                        p = self.tracker.update(p).tolist()
+                    if tracker is not None:
+                        p = tracker.get_next_pred()
+                        p = tracker.update(p).tolist()
                         # self.data.append(p)
                         point[:3] = p
                         self.data_store.set_marker(index, point)
                     else:
                         self.data.append(None)
                 else:
-                    if self.tracker is None:
-                        self.tracker = Tracker(point, self.dt)
+                    if tracker is None:
+                        tracker = Tracker(point, self.dt)
                         # self.data.append(point.tolist())
                     else:
-                        # self.data.append(self.tracker.update(point).tolist())
-                        point[:3] = self.tracker.update(point).tolist()
+                        # self.data.append(tracker.update(point).tolist())
+                        point[:3] = tracker.update(point).tolist()
                         self.data_store.set_marker(index, point)
         self.data_ready = True
         self.progress = 100

@@ -1,10 +1,10 @@
-from OptiPose.data_store_interface.DannceDataStore import DannceDataStore
 from OptiPose.data_store_interface.DataStoreInterface import DataStoreInterface, DataStoreStats
 from OptiPose.data_store_interface.DeeplabcutDataStore import DeeplabcutDataStore
+from OptiPose.data_store_interface.FlattenedDataStore import FlattenedDataStore
 from OptiPose.data_store_interface.OptiPoseDataStore3D import OptiPoseDataStore3D
 
 datastore_readers = {OptiPoseDataStore3D.FLAVOR: OptiPoseDataStore3D, DeeplabcutDataStore.FLAVOR: DeeplabcutDataStore,
-                     DannceDataStore.FLAVOR: DannceDataStore}
+                     FlattenedDataStore.FLAVOR: FlattenedDataStore}
 
 
 def initialize_datastore_reader(body_parts, path, reader_type):

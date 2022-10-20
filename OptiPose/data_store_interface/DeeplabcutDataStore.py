@@ -20,7 +20,7 @@ class DeeplabcutDataStore(DataStoreInterface):
             path: path to file
         """
         super().__init__(body_parts, path)
-        if os.path.exists(path):
+        if path is not None and os.path.exists(path):
             self.data = pd.read_csv(path, header=[0, 1, 2], index_col=0, dtype='unicode')
         else:
             self.data = None
@@ -99,14 +99,14 @@ class DeeplabcutDataStore(DataStoreInterface):
         return Part([arr['x'], arr['y']], name, arr['likelihood'])
 
     def get_keypoint_slice(self, slice_indices: list, name: str) -> np.ndarray:
-        return self.data.loc[slice_indices[0]:slice_indices[1], (self.scorer, name)].apply(
+        return self.data.loc[slice_indices[0]:slice_indices[1] - 1, (self.scorer, name)].apply(
             lambda x: self.build_part(x, name), axis=1).to_numpy()
 
     def set_keypoint_slice(self, slice_indices: list, name: str, data: np.ndarray) -> None:
-        self.data.loc[slice_indices[0]:slice_indices[1], (self.scorer, name, 'x')] = data[:, 0]
-        self.data.loc[slice_indices[0]:slice_indices[1], (self.scorer, name, 'y')] = data[:, 1]
-        self.data.loc[slice_indices[0]:slice_indices[1], (self.scorer, name, 'likelihood')] = [d.likelihood for d in
-                                                                                               data]
+        self.data.loc[slice_indices[0]:slice_indices[1] - 1, (self.scorer, name, 'x')] = data[:, 0]
+        self.data.loc[slice_indices[0]:slice_indices[1] - 1, (self.scorer, name, 'y')] = data[:, 1]
+        self.data.loc[slice_indices[0]:slice_indices[1] - 1, (self.scorer, name, 'likelihood')] = [d.likelihood for d in
+                                                                                                   data]
 
     def build_skeleton(self, row) -> Skeleton:
         part_map = {}

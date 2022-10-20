@@ -9,7 +9,7 @@ class BaseVideoReaderInterface(ABC):
 
     def __init__(self, video_path, fps):
         self.video_path = video_path
-        self.path_no_ext = os.path.splitext(self.video_path)[0]
+        self.base_file_path = os.path.splitext(self.video_path)[0]
         self.fps = fps
         self.total_frames = -1
 

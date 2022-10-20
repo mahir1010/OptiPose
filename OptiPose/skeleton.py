@@ -6,6 +6,7 @@ from OptiPose import MAGIC_NUMBER
 
 
 class Part(np.ndarray):
+
     def __new__(cls, arr, name, likelihood):
         # if len(arr) == 2:
         #     arr = np.append(arr, .0)
@@ -54,7 +55,10 @@ class Skeleton:
         for name in part_map.keys():
             candidates.remove(name)
             self.body_parts_map[name] = Part(part_map[name], name, likelihood_map[name])
-            assert self.body_parts_map[name].shape == (dims,)
+            try:
+                assert self.body_parts_map[name].shape == (dims,)
+            except:
+                print('h')
         for name in candidates:
             self.body_parts_map[name] = Part([MAGIC_NUMBER] * dims, name, .0)
 
@@ -123,6 +127,12 @@ class Skeleton:
             if type(other) == Skeleton:
                 prob[name] = min(self[name].likelihood, other[name].likelihood)
         return Skeleton(list(self.body_parts_map.keys()), None, val, prob)
+
+    def __eq__(self, other):
+        try:
+            return all([np.all(self[part] == other[part]) for part in self.body_parts])
+        except KeyError:
+            return False
 
     def __iter__(self):
         for part in self.body_parts_map.values():

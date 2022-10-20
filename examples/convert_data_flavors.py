@@ -1,12 +1,12 @@
-from OptiPose import convert_data_flavor
-from OptiPose.data_store_interface import DannceDataStore, OptiPoseDataStore3D
+from OptiPose import OptiPoseConfig
+from OptiPose.data_store_interface import FlattenedDataStore, OptiPoseDataStore3D
+from OptiPose.pipeline import convert_data_flavor
 
-dannce_bp = ["HeadF", "HeadB", "HeadL", "SpineF", "SpineM", "SpineL", "Offset1", "Offset2", "HipL", "HipR", "ShoulderL",
-             "ShoulderR", "KneeR", "KneeL", "ShinL", "ShinR"]
+config = OptiPoseConfig('./example_configs/Rat7M.yml')
 
-datastore = DannceDataStore(dannce_bp, '/media/mahirp/Storage/Downloads/mocap-s1-d1.csv')
+datastore = FlattenedDataStore(config.body_parts, '<path to source csv>')
 
-datastore_1 = OptiPoseDataStore3D(dannce_bp, '/media/mahirp/Storage/Downloads/mocap-s1-d1_reformat.csv')
+datastore_1 = OptiPoseDataStore3D(config.body_parts, '<path to target csv>')
 
 # Output file should not exist
 convert_data_flavor(datastore, datastore_1)
