@@ -1,7 +1,7 @@
 import numpy as np
 
 from OptiPose import MAGIC_NUMBER, Part
-from OptiPose.post_processor_interface import PostProcessorInterface
+from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessorInterface
 
 
 class GenerateVelocityProcess(PostProcessorInterface):
