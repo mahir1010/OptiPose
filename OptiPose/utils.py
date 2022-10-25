@@ -21,11 +21,6 @@ def magnitude(vector):
     return sqrt(np.sum(np.square(vector))) + 1e-5
 
 
-def evaluateFunction(fn, params):
-    if fn.strip().lower() == "avg":
-        return np.mean(params, axis=0)
-
-
 def alphaBetaFilter(measurement, prevState, dt, velocity=0, acceleration=0, a=0.7, b=0.85, g=0.8):
     estimate = prevState + velocity * dt + 0.5 * (dt ** 2) * acceleration
     velocity = velocity + acceleration * dt
@@ -36,35 +31,12 @@ def alphaBetaFilter(measurement, prevState, dt, velocity=0, acceleration=0, a=0.
     return estimate, velocity, acceleration
 
 
-def vectorYawPitch(v1, isDegrees=True):
-    multiplier = 57.2958 if isDegrees else 1
-    yaw = multiplier * math.atan2(v1[1], v1[0])
-    return np.array([yaw, 0])
-
-
-def getCosineAngle(v1, v2, isDegrees=True):
-    multiplier = 57.2958 if isDegrees else 1
-    v1 = v1[:2]
-    v2 = v2[:2]
-    return math.acos(np.dot(v1, v2) / (magnitude(v1) * magnitude(v2))) * multiplier
-
-
-def angleBVectors(v1, v2, isDegrees=True):
-    multiplier = 57.2958 if isDegrees else 1
-    # Yaw Calculations
-    y1 = multiplier * math.atan2(v1[1], v1[0])
-    y2 = multiplier * math.atan2(v2[1], v2[0])
-    yaw = y2 - y1
-    # pitch = multiplier * math.acos((v2[2]-v1[2])/magnitude(v2))
-    return np.array([yaw, 0])
-
-
-def getVectorMatrix(parts, rodent):
-    for i, p in enumerate(parts[:-1]):
-        for j, p2 in enumerate(parts[i + 1:]):
-            print(p, '-', p2, ':', angleBVectors(rodent[p2], rodent[p]), end=' ')
-        print(' ')
-    print('-------------------')
+def unit_spherical_coordinates(v1, is_degrees=True, is_shift=True):
+    multiplier = 57.2958 if is_degrees else 1
+    shift = (180 if is_degrees else math.pi) if is_shift else 0
+    unit = v1 / magnitude(v1)
+    return np.array([math.atan2(unit[1], unit[0]),
+                     math.atan2(math.sqrt(np.sum(np.square(unit[:2]))), unit[2])]) * multiplier + shift
 
 
 def convert_to_list(inp):

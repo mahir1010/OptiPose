@@ -25,7 +25,7 @@ class DataStoreInterface(ABC):
         self.data = None
         self.path = path
         self.stats = DataStoreStats(body_parts)
-        self.base_file_path = os.path.splitext(self.path)[0]
+        self.base_file_path = os.path.splitext(self.path)[0] if self.path is not None else None
         self.DIMENSIONS = dimension
         if os.path.exists(f'{self.base_file_path}_stats.bin'):
             self.stats = pickle.load(open(f'{self.base_file_path}_stats.bin', 'rb'))

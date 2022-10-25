@@ -38,7 +38,7 @@ def generate_dataset(root_path, dataset_name, is_test, data_stores: list, total_
         if not data_store.verify_stats():
             print('Analyzing File for accurate data points')
             analysis_processor.process(data_store)
-        c_count, histogram = data_store.stats.get_accurate_cluster_info()
+        c_count, histogram,_ = data_store.stats.get_accurate_cluster_info()
         cluster_counts.append(c_count)
         histogram_list.append(histogram)
     for histogram in histogram_list[1:]:

@@ -8,7 +8,7 @@ class PostProcessorInterface(ABC):
     PROCESS_NAME = "Abstract"
     PRINT = False
 
-    def __init__(self, target_column):
+    def __init__(self, target_column=None):
         self.target_column = target_column
         self.progress = 0
         self.data_store = None

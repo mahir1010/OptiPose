@@ -1,5 +1,6 @@
 import numpy as np
 
+from OptiPose import OptiPoseConfig
 from OptiPose.models.postural_autoencoder import optipose_postural_autoencoder
 from OptiPose.models.utils import build_batch
 from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessorInterface
@@ -8,12 +9,12 @@ from OptiPose.post_processor_interface.PostProcessorInterface import PostProcess
 class PosturalAutoEncoderProcess(PostProcessorInterface):
     PROCESS_NAME = "Postural Auto-Encoder"
 
-    def __init__(self, config, window_size, n_pcm, n_scm, n_heads, weights, overlap=0, output_dim=64,
+    def __init__(self, config:OptiPoseConfig, window_size, n_pcm, n_scm, n_heads, weights, overlap=0, output_dim=64,
                  translation_vector=np.array([0, 0, 0])):
         super(PosturalAutoEncoderProcess, self).__init__(None)
         self.window_size = window_size
         self.config = config
-        self.model = optipose_postural_autoencoder(window_size, len(config['body_parts']), n_pcm, n_scm, n_heads,
+        self.model = optipose_postural_autoencoder(window_size, config.num_parts, n_pcm, n_scm, n_heads,
                                                    output_dim, weights)
         self.overlap = max(overlap, 0)
         self.translation_vector = translation_vector
@@ -40,7 +41,7 @@ class PosturalAutoEncoderProcess(PostProcessorInterface):
             model_input = np.array(batch, dtype=np.float32)
             model_output = self.model.predict(model_input, verbose=0)
             for sequence, indices in zip(model_output, batch_indices):
-                for i, name in enumerate(self.config['body_parts']):
+                for i, name in enumerate(self.config.body_parts):
                     data_store.set_keypoint_slice(indices, name, sequence[:indices[1] - indices[0], i, :])
             if end == len(data_store) - 1:
                 break
