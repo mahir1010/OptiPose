@@ -26,7 +26,7 @@ class DeeplabcutDataStore(DataStoreInterface):
             self.data = None
             for bodypart in body_parts:
                 pdindex = pd.MultiIndex.from_product(
-                    [["PoseAnnotator"], [bodypart], ["x", "y", "likelihood"]],
+                    [["OptiPose"], [bodypart], ["x", "y", "likelihood"]],
                     names=["scorer", "bodyparts", "coords"],
                 )
                 frame = pd.DataFrame(columns=pdindex)

@@ -150,11 +150,15 @@ class DataStoreStats:
         self.na_data_points = {}
         self.accurate_data_points = []
         self._na_current_cluster = {}
+        self.occupancy_data = []
         for column in body_parts:
             self.na_data_points[column] = []
             self._na_current_cluster[column] = {'begin': -2, 'end': -2}
         self._accurate_cluster = {'begin': -2, 'end': -2}
         self.registered = False
+
+    def add_occupancy_data(self, fraction):
+        self.occupancy_data.append(fraction)
 
     def update_cluster_info(self, index, part, accurate=False):
         cluster = self._na_current_cluster[part] if not accurate else self._accurate_cluster
@@ -201,3 +205,17 @@ class DataStoreStats:
                     break
             histogram[target_bin] += 1
         return len(self.accurate_data_points), histogram, total
+
+    def get_occupancy_clusters(self, min_occupancy, max_occupancy):
+        assert 0 <= min_occupancy <= max_occupancy <= 1.0
+        pose_data = []
+        cluster = {'begin': -2, 'end': -2}
+        for index, occupancy in enumerate(self.occupancy_data):
+            if min_occupancy <= occupancy <= max_occupancy:
+                if cluster['end'] + 1 == index:
+                    cluster['end'] = index
+                else:
+                    if cluster['begin'] != -2:
+                        pose_data.append(cluster.copy())
+                    cluster['begin'] = cluster['end'] = index
+        return pose_data
