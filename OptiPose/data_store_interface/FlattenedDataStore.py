@@ -51,13 +51,13 @@ class FlattenedDataStore(DataStoreInterface):
             self.data.loc[index, [f"{name}_{i}" for i in range(1, self.DIMENSIONS + 1)]] = pd.NA
 
     def set_behaviour(self, index, behaviour: str) -> None:
-        self.data.loc[index, 'behaviour'] = behaviour
+        self.data.loc[index, 'behaviour'] = self.BEHAVIOUR_SEP.join(behaviour)
 
-    def get_behaviour(self, index) -> str:
-        if index in self.data.index:
-            return self.data.loc[index, 'behaviour']
+    def get_behaviour(self, index) -> list:
+        if index in self.data.index and not pd.isna(self.data.loc[index, 'behaviour']):
+            return self.data.loc[index, 'behaviour'].split(self.BEHAVIOUR_SEP)
         else:
-            return ""
+            return []
 
     def get_keypoint_slice(self, slice_indices: list, name: str) -> np.ndarray:
         return self.data.loc[slice_indices[0]:slice_indices[1] - 1,
@@ -92,7 +92,9 @@ class FlattenedDataStore(DataStoreInterface):
             if any(np.isnan(part_map[name])):
                 part_map[name] = np.array([MAGIC_NUMBER] * self.DIMENSIONS)
             likelihood_map[name] = float(not all(part_map[name] == MAGIC_NUMBER))
-        return Skeleton(self.body_parts, part_map=part_map, likelihood_map=likelihood_map, behaviour=row['behaviour'],
+        behaviour = [] if pd.isna(row['behaviour']) else row['behaviour'].split(self.BEHAVIOUR_SEP)
+        return Skeleton(self.body_parts, part_map=part_map, likelihood_map=likelihood_map,
+                        behaviour=behaviour,
                         dims=self.DIMENSIONS)
 
     def build_part(self, arr, name):

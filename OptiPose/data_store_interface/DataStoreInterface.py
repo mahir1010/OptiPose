@@ -13,6 +13,7 @@ class DataStoreInterface(ABC):
     FLAVOR = "Abstract"
     DIMENSIONS = 3
     SEP = ','
+    BEHAVIOUR_SEP = '~'
 
     def __init__(self, body_parts, path, dimension=3):
         """

@@ -67,13 +67,13 @@ class DeeplabcutDataStore(DataStoreInterface):
             self.data.loc[index, (self.scorer, name, 'likelihood')] = 0.0
 
     def set_behaviour(self, index, behaviour) -> None:
-        self.data.loc[index, (self.scorer, 'behaviour', 'name')] = behaviour
+        self.data.loc[index, (self.scorer, 'behaviour', 'name')] = self.BEHAVIOUR_SEP.join(behaviour)
 
-    def get_behaviour(self, index) -> str:
-        if index in self.data.index:
-            return self.data.loc[index, (self.scorer, 'behaviour', 'name')]
+    def get_behaviour(self, index) -> list:
+        if index in self.data.index and not pd.isna(self.data.loc[index, (self.scorer, 'behaviour', 'name')]):
+            return self.data.loc[index, (self.scorer, 'behaviour', 'name')].split(self.BEHAVIOUR_SEP)
         else:
-            return ""
+            return []
 
     def get_marker(self, index, name) -> Part:
         if index in self.data.index:
@@ -114,8 +114,10 @@ class DeeplabcutDataStore(DataStoreInterface):
         for name in self.body_parts:
             part_map[name] = [float(row[(self.scorer, name, 'x')]), float(row[(self.scorer, name, 'y')]), 0.0]
             likelihood_map[name] = float(row[(self.scorer, name, 'likelihood')])
+        behaviour = [] if pd.isna(row[(self.scorer, 'behaviour', 'name')]) else row[
+            (self.scorer, 'behaviour', 'name')].split(self.BEHAVIOUR_SEP)
         return Skeleton(self.body_parts, part_map=part_map, likelihood_map=likelihood_map,
-                        behaviour=row[(self.scorer, 'behaviour', 'name')])
+                        behaviour=behaviour)
 
     def get_valid_marker(self, name, threshold=0.01):
         try:

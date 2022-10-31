@@ -47,7 +47,7 @@ class Part(np.ndarray):
 
 
 class Skeleton:
-    def __init__(self, body_parts: list, part_map: dict = None, likelihood_map: dict = None, behaviour='', dims=3):
+    def __init__(self, body_parts: list, part_map: dict = None, likelihood_map: dict = None, behaviour=[], dims=3):
         self.body_parts = body_parts
         self.body_parts_map = {}
         candidates = body_parts.copy()
