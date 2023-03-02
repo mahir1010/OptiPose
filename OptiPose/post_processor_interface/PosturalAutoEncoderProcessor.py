@@ -1,13 +1,13 @@
 import numpy as np
 
-from OptiPose import OptiPoseConfig
+from OptiPose import OptiPoseConfig, MAGIC_NUMBER
 from OptiPose.models.postural_autoencoder import optipose_postural_autoencoder
 from OptiPose.models.utils import build_batch
 from OptiPose.post_processor_interface import ClusterAnalysisProcess
-from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessorInterface
+from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessor
 
 
-class SequentialPosturalAutoEncoderProcess(PostProcessorInterface):
+class SequentialPosturalAutoEncoderProcess(PostProcessor):
     PROCESS_NAME = "Sequenctial Postural Auto-Encoder"
 
     def __init__(self, config: OptiPoseConfig, window_size, n_pcm, n_scm, n_heads, weights, overlap=0, output_dim=64,
@@ -18,7 +18,7 @@ class SequentialPosturalAutoEncoderProcess(PostProcessorInterface):
         self.model = optipose_postural_autoencoder(window_size, config.num_parts, n_pcm, n_scm, n_heads,
                                                    output_dim, weights)
         self.overlap = max(overlap, 0)
-        self.translation_vector = translation_vector
+        self.translation_vector = np.array(translation_vector,dtype=np.float32)
 
     def process(self, data_store):
         batch_size = 1
@@ -41,7 +41,11 @@ class SequentialPosturalAutoEncoderProcess(PostProcessorInterface):
                 if end == len(data_store) - 1:
                     break
             model_input = np.array(batch, dtype=np.float32)
-            model_output = self.model.predict(model_input, verbose=0)
+            translation_mask  = np.all(model_input!=[MAGIC_NUMBER,MAGIC_NUMBER,MAGIC_NUMBER],axis=-1)
+            translation_matrix = np.zeros_like(model_input)
+            translation_matrix[translation_mask]=self.translation_vector
+            model_input += translation_matrix
+            model_output = self.model.predict(model_input, verbose=0)-translation_matrix
             for sequence, indices in zip(model_output, batch_indices):
                 for i, name in enumerate(self.config.body_parts):
                     data_store.set_keypoint_slice(indices, name, sequence[:indices[1] - indices[0], i, :])
@@ -58,7 +62,7 @@ class SequentialPosturalAutoEncoderProcess(PostProcessorInterface):
             return None
 
 
-class OccupancyPosturalAutoEncoderProcess(PostProcessorInterface):
+class OccupancyPosturalAutoEncoderProcess(PostProcessor):
     PROCESS_NAME = "Occupancy-Based Postural Auto-Encoder"
 
     def __init__(self, config: OptiPoseConfig, window_size, n_pcm, n_scm, n_heads, weights, output_dim=64,
@@ -71,7 +75,7 @@ class OccupancyPosturalAutoEncoderProcess(PostProcessorInterface):
         self.model = optipose_postural_autoencoder(window_size, config.num_parts, n_pcm, n_scm, n_heads,
                                                    output_dim, weights)
         self.translation_vector = translation_vector
-        self.min_window = 30
+        self.min_window = min_window
 
     def process(self, data_store, max_batch_size=40):
         self.data_store = data_store
@@ -85,7 +89,7 @@ class OccupancyPosturalAutoEncoderProcess(PostProcessorInterface):
         index = 0
         self.data_ready = False
         self.progress = 0
-        occupancy_ranges = [[0.7,1.0],[0.5,0.8]]
+        occupancy_ranges = [[0.7,1.0],[0.5,1.0]]
         current_occupancy_data = np.array(self.data_store.stats.occupancy_data)
         for occupancy_range in occupancy_ranges:
             if self.PRINT:

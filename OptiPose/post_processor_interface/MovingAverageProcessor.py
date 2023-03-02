@@ -1,9 +1,9 @@
 import numpy as np
 
-from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessorInterface
+from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessor
 
 
-class MovingAverageProcess(PostProcessorInterface):
+class MovingAverageProcess(PostProcessor):
     PROCESS_NAME = "Moving Average"
 
     def __init__(self, target_column, window_size, threshold=0.6):

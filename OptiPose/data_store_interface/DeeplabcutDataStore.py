@@ -3,7 +3,6 @@ import os
 import numpy as np
 import pandas as pd
 
-from OptiPose import MAGIC_NUMBER
 from OptiPose.data_store_interface.DataStoreInterface import DataStoreInterface
 from OptiPose.skeleton import Skeleton, Part
 
@@ -81,7 +80,7 @@ class DeeplabcutDataStore(DataStoreInterface):
                 [self.data.loc[index, (self.scorer, name, 'x')], self.data.loc[index, (self.scorer, name, 'y')]],
                 name, self.data.loc[index, (self.scorer, name, 'likelihood')])
         else:
-            return Part([MAGIC_NUMBER] * self.DIMENSIONS, name, 0.0)
+            return Part([self.MAGIC_NUMBER] * self.DIMENSIONS, name, 0.0)
 
     def set_marker(self, index, part: Part) -> None:
         name = part.name

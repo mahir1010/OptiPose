@@ -1,11 +1,11 @@
 import numpy as np
 
-from OptiPose import MAGIC_NUMBER, Part
+from OptiPose import Part
 from OptiPose.data_store_interface import FlattenedDataStore
-from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessorInterface
+from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessor
 
 
-class HeadingAnalysisProcess(PostProcessorInterface):
+class HeadingAnalysisProcess(PostProcessor):
     PROCESS_NAME = "Heading Analysis"
 
     def __init__(self, head_directon:list, body_direction:list, movement_direction:list,motion_smooth_window=10):

@@ -1,8 +1,8 @@
 from OptiPose.data_store_interface import DataStoreInterface
-from OptiPose.post_processor_interface import PostProcessorInterface
+from OptiPose.post_processor_interface import PostProcessor
 
 
-class FileLoadProcess(PostProcessorInterface):
+class FileLoadProcess(PostProcessor):
     PROCESS_NAME = "Load File"
 
     def process(self, data_store: DataStoreInterface):

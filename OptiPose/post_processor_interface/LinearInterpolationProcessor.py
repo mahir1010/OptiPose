@@ -1,7 +1,7 @@
-from OptiPose.post_processor_interface import PostProcessorInterface
+from OptiPose.post_processor_interface import PostProcessor
 
 
-class LinearInterpolationProcess(PostProcessorInterface):
+class LinearInterpolationProcess(PostProcessor):
     REQUIRES_STATS = True
     PROCESS_NAME = "Linear Interpolation"
 
@@ -10,11 +10,11 @@ class LinearInterpolationProcess(PostProcessorInterface):
         self.threshold = threshold
         self.max_cluster_size = max_cluster_size
 
-    def process(self, data_store):
+    def process(self, data_store,parallel=False):
         self.data_store = data_store
         self.data_ready = False
         self.progress = 0
-        if not self.data_store.verify_stats():
+        if not parallel and not self.data_store.verify_stats():
             raise Exception("This process requires data-frame statistics."
                             "\nPlease run ClusterAnalysisProcess before this one")
         for index, candidate in enumerate(self.data_store.stats.iter_na_clusters(self.target_column)):

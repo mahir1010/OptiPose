@@ -1,9 +1,9 @@
 import numpy as np
 
-from OptiPose.post_processor_interface import PostProcessorInterface
+from OptiPose.post_processor_interface import PostProcessor
 
 
-class MedianDistanceFilterProcess(PostProcessorInterface):
+class MedianDistanceFilterProcess(PostProcessor):
     PROCESS_NAME = "Median Distance Culling"
 
     def process(self, data_store):

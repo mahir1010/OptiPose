@@ -1,8 +1,8 @@
 from OptiPose.data_store_interface import DataStoreInterface
-from OptiPose.post_processor_interface import PostProcessorInterface
+from OptiPose.post_processor_interface import PostProcessor
 
 
-class FileSaveProcess(PostProcessorInterface):
+class FileSaveProcess(PostProcessor):
     PROCESS_NAME = "Save File"
 
     def process(self, data_store: DataStoreInterface):

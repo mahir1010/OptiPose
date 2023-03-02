@@ -1,10 +1,10 @@
 import numpy as np
 
 from OptiPose import MAGIC_NUMBER, Part
-from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessorInterface
+from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessor
 
 
-class GenerateVelocityProcess(PostProcessorInterface):
+class GenerateVelocityProcess(PostProcessor):
     PROCESS_NAME = "Generate Velocity"
 
     def __init__(self, target_column, frame_rate, velocity_threshold, threshold=0.6):
@@ -37,6 +37,8 @@ class GenerateVelocityProcess(PostProcessorInterface):
                 else:
                     velocity = [MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER]
             empty_datastore.set_marker(index, Part(velocity, self.target_column, float(flag)))
+        if self.PRINT:
+            print(f'\r {self.PROCESS_NAME} 100% complete', end='')
         self.data_ready = True
         self.progress = 100
 

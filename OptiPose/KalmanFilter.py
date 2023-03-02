@@ -24,9 +24,9 @@ class Tracker:
              [0, 0, 0, 0, 0, 0, 0, 1, 0],
              [0, 0, 0, 0, 0, 0, 0, 0, 1]])
         kalman.H = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0, 0, 0]])
-        kalman.P *= 1000
-        kalman.R = 0.00001
-        kalman.Q = Q_discrete_white_noise(3, dt=self.dt, var=0.5, block_size=3, order_by_dim=False)
+        kalman.P *= 100
+        kalman.R *= 0.8
+        kalman.Q = Q_discrete_white_noise(3, dt=self.dt, block_size=3, order_by_dim=False)
         kalman.B = 0
         return kalman
 

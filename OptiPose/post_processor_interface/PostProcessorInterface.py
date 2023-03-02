@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from OptiPose.data_store_interface import DataStoreInterface
 
 
-class PostProcessorInterface(ABC):
+class PostProcessor(ABC):
     REQUIRES_STATS = False
     PROCESS_NAME = "Abstract"
     PRINT = False

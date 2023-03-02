@@ -3,7 +3,6 @@ import os
 import numpy as np
 import pandas as pd
 
-from OptiPose import MAGIC_NUMBER
 from OptiPose.data_store_interface.DataStoreInterface import DataStoreInterface
 from OptiPose.skeleton import Skeleton, Part
 
@@ -72,15 +71,15 @@ class FlattenedDataStore(DataStoreInterface):
         if index in self.data.index:
             pt = np.array([self.data.loc[index, f"{name}_{i}"] for i in range(1, self.DIMENSIONS + 1)])
             if any(np.isnan(pt)):
-                pt = np.array([MAGIC_NUMBER] * self.DIMENSIONS)
-            return Part(pt, name, float(not all(pt == MAGIC_NUMBER)))
+                pt = np.array([self.MAGIC_NUMBER] * self.DIMENSIONS)
+            return Part(pt, name, float(not all(pt == self.MAGIC_NUMBER)))
         else:
-            return Part([MAGIC_NUMBER] * self.DIMENSIONS, name, 0.0)
+            return Part([self.MAGIC_NUMBER] * self.DIMENSIONS, name, 0.0)
 
     def set_marker(self, index, part: Part) -> None:
         name = part.name
         for i in range(1, part.shape[0] + 1):
-            self.data.loc[index, f"{name}_{i}"] = part[i - 1] if part[i - 1] != MAGIC_NUMBER else pd.NA
+            self.data.loc[index, f"{name}_{i}"] = part[i - 1] if part[i - 1] != self.MAGIC_NUMBER else pd.NA
         if not self.data.index.is_monotonic_increasing:
             self.data.sort_index(inplace=True)
 
@@ -90,8 +89,8 @@ class FlattenedDataStore(DataStoreInterface):
         for name in self.body_parts:
             part_map[name] = np.array([row[f"{name}_{i}"] for i in range(1, self.DIMENSIONS + 1)])
             if any(np.isnan(part_map[name])):
-                part_map[name] = np.array([MAGIC_NUMBER] * self.DIMENSIONS)
-            likelihood_map[name] = float(not all(part_map[name] == MAGIC_NUMBER))
+                part_map[name] = np.array([self.MAGIC_NUMBER] * self.DIMENSIONS)
+            likelihood_map[name] = float(not all(part_map[name] == self.MAGIC_NUMBER))
         behaviour = [] if pd.isna(row['behaviour']) else row['behaviour'].split(self.BEHAVIOUR_SEP)
         return Skeleton(self.body_parts, part_map=part_map, likelihood_map=likelihood_map,
                         behaviour=behaviour,
@@ -100,8 +99,8 @@ class FlattenedDataStore(DataStoreInterface):
     def build_part(self, arr, name):
         pt = arr.to_numpy()
         if any(np.isnan(pt)):
-            pt = np.array([MAGIC_NUMBER] * self.DIMENSIONS)
-        return Part(pt, name, float(not all(pt == MAGIC_NUMBER)))
+            pt = np.array([self.MAGIC_NUMBER] * self.DIMENSIONS)
+        return Part(pt, name, float(not all(pt == self.MAGIC_NUMBER)))
 
     def get_header_rows(self):
         header = []

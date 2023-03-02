@@ -1,8 +1,8 @@
 from OptiPose.data_store_interface import DataStoreStats
-from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessorInterface
+from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessor
 
 
-class ClusterAnalysisProcess(PostProcessorInterface):
+class ClusterAnalysisProcess(PostProcessor):
     PROCESS_NAME = "Data Analysis"
 
     def __init__(self, threshold=0.6):

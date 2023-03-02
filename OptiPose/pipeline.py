@@ -1,16 +1,17 @@
 import csv
 import os
-import random
 
 import numpy as np
 from scipy.spatial.transform import Rotation
 
 from OptiPose import Skeleton, Part, DLTrecon, rotate, OptiPoseConfig
-from OptiPose.data_store_interface import DataStoreInterface, initialize_datastore_reader
-from OptiPose.video_reader_interface import BaseVideoReaderInterface, initialize_video_reader
+from OptiPose.data_store_interface import DataStoreInterface, DeeplabcutDataStore, OptiPoseDataStore3D
+from OptiPose.post_processor_interface import ClusterAnalysisProcess
+from OptiPose.utils import compute_distance_matrix, magnitude
+from OptiPose.video_reader_interface import BaseVideoReaderInterface
 
 
-def reconstruct_3D(config, views, data_readers: DataStoreInterface, name='recon', threshold=0.95):
+def reconstruct_3D(config:OptiPoseConfig, views, data_readers: DataStoreInterface, name='recon', threshold=0.95):
     dlt_coefficients = np.array([camera['dlt_coefficients'] for camera in views.values()])
     reconstruction_algorithm = config['OptiPose']['reconstruction_algorithm']
     origin_2D = [camera['axes']['origin'] for camera in views.values()]
@@ -21,7 +22,7 @@ def reconstruct_3D(config, views, data_readers: DataStoreInterface, name='recon'
     y_max = Part((DLTrecon(3, len(y_max_2D), dlt_coefficients, y_max_2D)), "y_max", 1)
     rotation_matrix = Rotation.align_vectors([x_max - origin, y_max - origin], [[1, 0, 0], [0, 1, 0]])[0].as_matrix()
     origin = Part(rotate(DLTrecon(3, len(origin_2D), dlt_coefficients, origin_2D), rotation_matrix), "origin", 1)
-    scale = 1000.0
+    scale = config.scale
     trans_mat = scale * -origin
     file = open(os.path.join(config['output_folder'],
                              f"{name}_{threshold}_{'_'.join([camera for camera in views]) if reconstruction_algorithm != 'auto_subset' else 'auto_subset'}.csv"),
@@ -51,39 +52,33 @@ def reconstruct_3D(config, views, data_readers: DataStoreInterface, name='recon'
     print("\rReconstructing 3D Scene 100% complete")
 
 
-def generate_EasyWand_data(config, csv_maps, static_points):
-    print(csv_maps.keys())
-    common_indices = [set(csv_maps[cam].data.index) for cam in config['views']]
-    common_indices = list(common_indices[0].intersection(*common_indices[1:]))
-    # remove = list(range(len(common_indices)-1,-1,-2))
-    # for r in remove:
-    #     common_indices.pop(r)
-    writer = csv.writer(open(os.path.join(config['output_folder'], 'wandPoints.csv'), 'w'))
-    parts = set(*config['skeleton'])
-    parts = parts.difference(static_points)
+def generate_EasyWand_data(config: OptiPoseConfig, csv_maps, common_indices, static_points_map):
+    file = open(os.path.join(config.output_folder, f'{config.project_name}_calibration_camera_order.txt'), 'w')
+    camera_profile = open(os.path.join(config.output_folder, f'{config.project_name}_calibration_camera_profiles.txt'),'w')
+    for i, camera in enumerate(config.views):
+        file.write(f'{camera} ')
+        camera_config = config.views[camera]
+        profile = f'{i + 1} {camera_config.f_px} {camera_config.resolution[0]} {camera_config.resolution[1]} {camera_config.principal_point[0]} {camera_config.principal_point[1]} 1 0 0 0 0 0\n'
+        camera_profile.write(profile)
+    camera_profile.close()
+    file.close()
+    static_writer = csv.writer(open(os.path.join(config.output_folder, f'{config.project_name}_background.csv'), 'w'))
+    writer = csv.writer(open(os.path.join(config.output_folder, f'{config.project_name}_WandPoints.csv'), 'w'))
+    parts = config.body_parts
     for idx in common_indices:
-        if all(csv_df.get_marker(idx, name) > 0 for csv_df in csv_maps.values() for name in parts):
-            builder = []
-            for part in parts:
-                for csv_df in csv_maps.values():
-                    builder.extend(np.round(csv_df.get_marker(idx, part)[:2]).astype(np.int32))
-            writer.writerow(builder)
-    valid_static = set()
-    for static_point in static_points:
-        insert = True
-        for csv_df in csv_maps.values():
-            pt = csv_df.get_valid_marker(static_point)
-            if pt is None:
-                insert = False
-        if insert:
-            valid_static.add(static_point)
-    writer1 = csv.writer(open(os.path.join(config['output_folder'], 'background.csv'), 'w'))
-    print(valid_static)
-    for valid in valid_static:
         builder = []
-        for csv_df in csv_maps.values():
-            builder.extend(np.round(csv_df.get_valid_marker(valid)[:2]).astype(np.int32))
-        writer1.writerow(builder)
+        for part in parts:
+            for csv_df in csv_maps.values():
+                builder.extend(np.round(csv_df.get_marker(idx, part)[:2]).astype(np.int32))
+        writer.writerow(builder)
+
+    static_rows = []
+    for camera in static_points_map:
+        for i, point in enumerate(static_points_map[camera]):
+            if len(static_rows) == i:
+                static_rows.append([])
+            static_rows[i].extend(point)
+    static_writer.writerows(static_rows)
 
 
 def compute_invalid_frame_indices(video_reader: BaseVideoReaderInterface, data_store: DataStoreInterface,
@@ -146,6 +141,9 @@ def update_alignment_matrices(config: OptiPoseConfig, source_views: list):
         rotation_matrix = Rotation.align_vectors([x_max - origin, y_max - origin], [[1, 0, 0], [0, 1, 0]])[
             0].as_matrix()
         origin = Part(rotate(DLTrecon(3, len(origin_2D), dlt_coefficients, origin_2D), rotation_matrix), "origin", 1)
+        x_max = Part(rotate(DLTrecon(3, len(x_max_2D), dlt_coefficients, x_max_2D), rotation_matrix), "x_max", 1)
+        y_max = Part(rotate(DLTrecon(3, len(y_max_2D), dlt_coefficients, y_max_2D), rotation_matrix), "y_max", 1)
+        config.computed_scale = (config.scale / magnitude(x_max - origin) + config.scale / magnitude(y_max - origin))/2
         trans_mat = -origin
         config.rotation_matrix = rotation_matrix
         config.translation_matrix = trans_mat
@@ -193,31 +191,101 @@ def remove_duplicate_rows(source: DataStoreInterface):
 
 
 def filter_from_velocity(datastore: DataStoreInterface, velocity_datastore: DataStoreInterface, threshold):
+    counts = 0
     for i in range(len(datastore)):
         if i % 100 == 0:
             print(f'\r{i}/{len(datastore)}', end='')
         for body_part in datastore.body_parts:
-            if max(np.abs(velocity_datastore.get_marker(i, body_part)).tolist()) > threshold:
+            if magnitude(velocity_datastore.get_marker(i, body_part)) > threshold:
                 datastore.delete_marker(i, body_part, True)
+                counts += 1
+    print(f"\n{counts} data points filtered")
     datastore.save_file(f'{datastore.base_file_path}_velocity_filtered.csv')
 
 
-if __name__ == '__main__':
-    import yaml as yml
+def generate_distance_matrices(config: OptiPoseConfig, data_points: list):
+    output_distance_matrices = np.zeros((2, config.num_parts, config.num_parts))
+    distance_matrices = []
+    for point in data_points:
+        distance_matrices.append(compute_distance_matrix(point))
+    output_distance_matrices[0] = np.mean(distance_matrices, axis=0)
+    output_distance_matrices[1] = np.std(distance_matrices, axis=0)
+    return output_distance_matrices
 
-    config = yml.safe_load(open('/home/mahirp/Projects/Pose Annotator/Resources/220510_1.yaml', 'r'))
-    view = config['views']['Blue']
-    compute_invalid_frame_indices(initialize_video_reader(view['video_file'], 60, 'opencv'),
-                                  initialize_datastore_reader(config['body_parts'], view['annotation_file'],
-                                                              'deeplabcut'))
-    view = config['views']['Pink']
-    compute_invalid_frame_indices(initialize_video_reader(view['video_file'], 60, 'opencv'),
-                                  initialize_datastore_reader(config['body_parts'], view['annotation_file'],
-                                                              'deeplabcut'))
-    view = config['views']['Yellow']
-    compute_invalid_frame_indices(initialize_video_reader(view['video_file'], 60, 'opencv'),
-                                  initialize_datastore_reader(config['body_parts'], view['annotation_file'],
-                                                              'deeplabcut'))
+
+def pick_calibration_candidates(config: OptiPoseConfig, data_stores: list, resolution, bin_size):
+    assert len(data_stores) > 1
+    cluster_analysis = ClusterAnalysisProcess(config.threshold)
+    cluster_analysis.PRINT = True
+    for i in range(len(data_stores)):
+        if not data_stores[i].verify_stats():
+            cluster_analysis.process(data_stores[i])
+            data_stores[i] = cluster_analysis.get_output()
+    accurate_data_points = data_stores[0].stats.accurate_data_points
+    for data_store in data_stores[1:]:
+        accurate_data_points = data_store.stats.intersect_accurate_data_points(accurate_data_points)
+    num_bins = (resolution[0] // bin_size, resolution[1] // bin_size)
+    spatial_bins = np.zeros(num_bins)
+    frame_number = np.zeros(num_bins)
+    part = data_stores[0].body_parts[0]
+    candidates = []
+    for accurate_data in accurate_data_points:
+        for index in range(accurate_data['begin'], accurate_data['end']):
+            position = data_stores[0].get_marker(index, part)
+            x_bin, y_bin = int(position[0] / bin_size), int(position[1] / bin_size)
+            if 0 <= x_bin < num_bins[0] and 0 <= y_bin < num_bins[1] and (spatial_bins[x_bin][y_bin] < 3 and index-frame_number[x_bin][y_bin]>10):
+                spatial_bins[x_bin][y_bin] += 1
+                frame_number[x_bin][y_bin]=index
+                candidates.append(index)
+    return candidates
+
+def refactor_likelihood_for_uncertainty_region(data_store:DeeplabcutDataStore,uncertainty_regions:list):
+    for index,skeleton in data_store.row_iterator():
+        if index % 100 == 0:
+            print(f'\r{index}/{len(data_store)}', end='')
+        for part in data_store.body_parts:
+            for uncertainty_region in uncertainty_regions:
+                if uncertainty_region[0][0]<skeleton[part][0]<uncertainty_region[0][1] and uncertainty_region[1][0]<skeleton[part][1]<uncertainty_region[1][1]:
+                    data_store.delete_marker(index,part,force_remove=True)
+                    break
+    data_store.save_file(data_store.path.replace('.csv','_region_filtered.csv'))
+if __name__ == '__main__':
+    import random
+
+    config = OptiPoseConfig('/home/mahirp/Projects/OptiPose/examples/example_configs/Rodent3D.yml')
+    # Generate Distance Stats
+
+    data_store  = OptiPoseDataStore3D(config.body_parts,'/media/mahirp/Storage/RodentVideos/051022/sync/recon_dstat_interp_kalman.csv')
+    cluster_analysis = ClusterAnalysisProcess()
+    cluster_analysis.PRINT=True
+    cluster_analysis.process(data_store)
+    data_store = cluster_analysis.get_output()
+    num_samples = 300
+    samples = []
+    adp_sample=random.sample(data_store.stats.accurate_data_points,min(150,len(data_store.stats.accurate_data_points)))
+    while len(samples)<num_samples:
+        samples.extend([data_store.get_skeleton(random.randint(smpl['begin'],smpl['end'])) for smpl in adp_sample if smpl['end']-smpl['begin']>10])
+    out=generate_distance_matrices(config,samples)
+    np.save('/media/mahirp/Storage/RodentVideos/051622/sync/rodent_distance_matrix_stats.npy',out)
+    # End Generate Distance Stats
+    # base_path = '/media/mahirp/Storage/RodentVideos/051122/Calibration/sync/'
+    # views = ['calib_Green', 'calib_Orange', 'calib_Red']
+    # data_stores = [DeeplabcutDataStore(['Pink', 'Yellow'], os.path.join(base_path, f'{view}.csv')) for view in views]
+    # candidates = pick_calibration_candidates(config, data_stores, [1024, 1024], 40)
+    # f = open(os.path.join(base_path, 'candidate_frames.txt'), 'w')
+    # f.write('\n'.join([str(candidate) for candidate in candidates]))
+    # view = config['views']['Blue']
+    # compute_invalid_frame_indices(initialize_video_reader(view['video_file'], 60, 'opencv'),
+    #                               initialize_datastore_reader(config['body_parts'], view['annotation_file'],
+    #                                                           'deeplabcut'))
+    # view = config['views']['Pink']
+    # compute_invalid_frame_indices(initialize_video_reader(view['video_file'], 60, 'opencv'),
+    #                               initialize_datastore_reader(config['body_parts'], view['annotation_file'],
+    #                                                           'deeplabcut'))
+    # view = config['views']['Yellow']
+    # compute_invalid_frame_indices(initialize_video_reader(view['video_file'], 60, 'opencv'),
+    #                               initialize_datastore_reader(config['body_parts'], view['annotation_file'],
+    #                                                           'deeplabcut'))
     # csv_maps={}
     # for view in config['views']:
     #     csv_maps[view]=DeeplabcutDataStore(config['body_parts'],config['views'][view]['annotation_file'])

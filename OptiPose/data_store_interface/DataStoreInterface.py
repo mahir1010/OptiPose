@@ -14,6 +14,7 @@ class DataStoreInterface(ABC):
     DIMENSIONS = 3
     SEP = ','
     BEHAVIOUR_SEP = '~'
+    MAGIC_NUMBER = MAGIC_NUMBER
 
     def __init__(self, body_parts, path, dimension=3):
         """
@@ -132,7 +133,10 @@ class DataStoreInterface(ABC):
         return int(pd.util.hash_pandas_object(self.data).sum())
 
     def verify_stats(self):
-        return (self.compute_data_hash() == self.stats.data_frame_hash) and (self.stats.body_parts == self.body_parts)
+        if not (self.compute_data_hash() == self.stats.data_frame_hash) and (self.stats.body_parts == self.body_parts):
+            self.stats.registered = False
+            return False
+        return True
 
     @staticmethod
     @abstractmethod
@@ -220,3 +224,24 @@ class DataStoreStats:
                         pose_data.append(cluster.copy())
                     cluster['begin'] = cluster['end'] = index
         return pose_data
+
+    def intersect_accurate_data_points(self,accurate_clusters):
+        output_accurate_cluster = []
+        source_index = 0
+        target_index = 0
+        while source_index<len(self.accurate_data_points) and target_index<len(accurate_clusters):
+            if self.accurate_data_points[source_index]['end']< accurate_clusters[target_index]['begin']:
+                source_index+=1
+                continue
+            if self.accurate_data_points[source_index]['begin']> accurate_clusters[target_index]['end']:
+                target_index+=1
+                continue
+            output_accurate_cluster.append({'begin':max(self.accurate_data_points[source_index]['begin'],
+                                                        accurate_clusters[target_index]['begin']),
+                                            'end':min(self.accurate_data_points[source_index]['end'],
+                                                        accurate_clusters[target_index]['end'])})
+            if source_index+1<len(self.accurate_data_points) and self.accurate_data_points[source_index+1]['begin']<=accurate_clusters[target_index]['end']:
+                source_index+=1
+            else:
+                target_index+=1
+        return output_accurate_cluster

@@ -45,6 +45,8 @@ class Part(np.ndarray):
     def __radd__(self, other):
         return Part(super().__radd__(other), self.name, self.likelihood)
 
+    def numpy(self):
+        return np.array(self)
 
 class Skeleton:
     def __init__(self, body_parts: list, part_map: dict = None, likelihood_map: dict = None, behaviour=[], dims=3):
@@ -58,7 +60,7 @@ class Skeleton:
             try:
                 assert self.body_parts_map[name].shape == (dims,)
             except:
-                print('h')
+                pass
         for name in candidates:
             self.body_parts_map[name] = Part([MAGIC_NUMBER] * dims, name, .0)
 
@@ -137,6 +139,9 @@ class Skeleton:
     def __iter__(self):
         for part in self.body_parts_map.values():
             yield part
+
+    def __len__(self):
+        return len(self.body_parts)
 
     def normalize(self, max_lim: np.ndarray, min_lim: np.ndarray):
         max_lim = np.array(max_lim)

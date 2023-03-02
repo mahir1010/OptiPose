@@ -4,12 +4,12 @@ from tensorflow.keras.layers import MultiHeadAttention, PReLU, Dense, Reshape, I
 from OptiPose import MAGIC_NUMBER
 
 
-def sub_context_model(cm_index, index, inputs, concat, key_dim=64, num_heads=1):
-    x, attn = MultiHeadAttention(num_heads=num_heads, key_dim=key_dim, name=f'cm_{cm_index}_scm_{index}_attn')(inputs,
+def sub_context_model(cm_index, index, inputs, concat, key_dim=64, num_heads=1,dropout=0):
+    x, attn = MultiHeadAttention(num_heads=num_heads, key_dim=key_dim, name=f'cm_{cm_index}_scm_{index}_attn',dropout=dropout)(inputs,
                                                                                                                inputs,
                                                                                                                return_attention_scores=True)
     x = tf.concat([x, concat], axis=-1)
-    x = Dense(key_dim, activation=PReLU(), kernel_regularizer='l2', name=f'cm_{cm_index}_scm_{index}_out')(x)
+    x = Dense(key_dim, activation=PReLU(), kernel_regularizer='l1_l2', name=f'cm_{cm_index}_scm_{index}_out')(x)
     return x
 
 
@@ -17,7 +17,7 @@ def context_model(index, inp, concat_inp, num_sub_ck, output_dim=64, embedding_d
     x = inp
     c = concat_inp
     for i in range(num_sub_ck):
-        x = sub_context_model(index, i, x, c, num_heads=num_heads, key_dim=embedding_dims)
+        x = sub_context_model(index, i, x, c, num_heads=num_heads, key_dim=embedding_dims,dropout=0 if i==0 else 0.2)
         c = x
     x = Dense(output_dim, name=f"cm_{index}_out")(x)
     return x

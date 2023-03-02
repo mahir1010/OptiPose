@@ -1,8 +1,8 @@
 from OptiPose.KalmanFilter import Tracker
-from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessorInterface
+from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessor
 
 
-class KalmanFilterProcess(PostProcessorInterface):
+class KalmanFilterProcess(PostProcessor):
     PROCESS_NAME = "Kalman Filtering"
 
     def __init__(self, target_column, framerate, skip=True, threshold=0.6):
@@ -20,8 +20,13 @@ class KalmanFilterProcess(PostProcessorInterface):
             self.progress = int(index / len(self.data_store) * 100)
             if self.skip:
                 if point < self.threshold:
-                    tracker = None
-                    # self.data.append(None)
+                    # new_tracker = Tracker(point, self.dt)
+                    # new_tracker.tracker.R = tracker.tracker.R.copy()
+                    # new_tracker.tracker.Q = tracker.tracker.Q.copy()
+                    # new_tracker.tracker.P = tracker.tracker.P.copy()
+                    del tracker
+                    # tracker = new_tracker
+                    tracker=None
                 else:
                     if tracker is None:
                         tracker = Tracker(point, self.dt)

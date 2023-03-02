@@ -1,11 +1,11 @@
 import json
 import math
-from math import sqrt
 
 import numpy as np
+import pandas as pd
 
 from OptiPose import Part
-from OptiPose.config import MAGIC_NUMBER
+from OptiPose.config import MAGIC_NUMBER, OptiPoseConfig, save_config
 
 
 def rotate(p, rotation, scale=1.0, is_inv=False):
@@ -18,7 +18,16 @@ def rotate(p, rotation, scale=1.0, is_inv=False):
 
 
 def magnitude(vector):
-    return sqrt(np.sum(np.square(vector))) + 1e-5
+    return np.linalg.norm(vector)
+
+
+def compute_distance_matrix(skeleton):
+    return np.array(
+        [[magnitude(skeleton[p1] - skeleton[p2]) if skeleton[p1]>0 and skeleton[p2]>0 else -1 for p2 in skeleton.body_parts] for p1 in skeleton.body_parts])
+
+
+def normalize_vector(vector):
+    return np.divide(vector, magnitude(vector))
 
 
 def alphaBetaFilter(measurement, prevState, dt, velocity=0, acceleration=0, a=0.7, b=0.85, g=0.8):
@@ -114,20 +123,28 @@ def convert_numpy_to_datastore(pickled_data: np.ndarray, header_names, flavor, o
         datastore.set_skeleton(index, skeleton)
     datastore.save_file()
 
+def update_config_dlt_coeffs(config:OptiPoseConfig,dlt_coefficients_file,order):
+    dlt_coefficients=pd.read_csv(dlt_coefficients_file,header=None)
+    for index,camera in enumerate(order):
+        dlt_coeff = dlt_coefficients[index].tolist()
+        dlt_coeff.append(1)
+        config.views[camera].dlt_coefficients = np.array(dlt_coeff)
+    save_config(config.path,config.export_dict())
 
 if __name__ == "__main__":
     # import yaml
     import pickle
     import glob
-
+    config = OptiPoseConfig('/home/mahirp/Projects/Pose Annotator/Resources/220406_calib_updated.yaml')
+    # update_config_dlt_coeffs(OptiPoseConfig('/home/mahirp/Projects/Pose Annotator/Resources/220511_updated.yaml'),'/media/mahirp/Storage/RodentVideos/051122/Calibration/sync/051122_GOR_dltCoefs.csv',['Green','Orange','Red'])
     # config = yaml.safe_load(open('/media/mahirp/Storage/RodentVideos/TestVideos/220510/test.yaml', 'r'))
-    files = glob.glob('/home/mahirp/Projects/ACINO/*.pickle')
-    acino_bp = ['nose', 'l_eye', 'r_eye', 'neck_base', 'spine', 'tail_base', 'tail1', 'tail2', 'r_shoulder',
-                'r_front_knee', 'r_front_ankle', 'l_shoulder', 'l_front_knee', 'l_front_ankle', 'r_hip', 'r_back_knee',
-                'r_back_ankle', 'l_hip', 'l_back_knee', 'l_back_ankle']
-    for file in files:
-        convert_numpy_to_datastore(np.array(pickle.load(open(file, 'rb'))['positions']), acino_bp, 'flattened',
-                                   file.replace('.pickle', '.csv'))
+    # files = glob.glob('/home/mahirp/Projects/ACINO/*.pickle')
+    # acino_bp = ['nose', 'l_eye', 'r_eye', 'neck_base', 'spine', 'tail_base', 'tail1', 'tail2', 'r_shoulder',
+    #             'r_front_knee', 'r_front_ankle', 'l_shoulder', 'l_front_knee', 'l_front_ankle', 'r_hip', 'r_back_knee',
+    #             'r_back_ankle', 'l_hip', 'l_back_knee', 'l_back_ankle']
+    # for file in files:
+    #     convert_numpy_to_datastore(np.array(pickle.load(open(file, 'rb'))['positions']), acino_bp, 'flattened',
+    #                                file.replace('.pickle', '.csv'))
     # offset_deeplabcut_csv(
     #     '/media/mahirp/Storage/RodentVideos/TestVideos/220510/GreenDLC_effnet_b0_FLIRDLC_GREENAug6shuffle1_70000.csv_data',
     #     config['body_parts'], 0, 110)

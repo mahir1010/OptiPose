@@ -6,7 +6,7 @@ import tensorflow as tf
 
 from OptiPose import MAGIC_NUMBER
 from OptiPose.data_store_interface import DataStoreInterface
-from OptiPose.post_processor_interface import ClusterAnalysisProcess
+
 
 
 @tf.function
@@ -23,7 +23,8 @@ def distance_map_non_zero(ref, points):
 
 
 def build_spatio_temporal_loss(spatial_factor=0.0001, temporal_factor=0.0001):
-    assert spatial_factor < 1 and temporal_factor < 1
+    assert spatial_factor <= 1 and temporal_factor <= 1
+    huber = tf.keras.losses.Huber()
 
     @tf.function
     def loss_fn(y_t_o, y_p):
@@ -33,9 +34,11 @@ def build_spatio_temporal_loss(spatial_factor=0.0001, temporal_factor=0.0001):
                        dtype=tf.float32)  # bx30
         total = tf.reduce_sum(mask, axis=-1)
         # bx30x20x3
-        euclidean_loss = tf.reduce_sum(tf.sqrt(1e-9 + tf.reduce_sum(tf.square(y_t - y_p), axis=-1)), axis=-1)
-        euclidean_loss = tf.reduce_mean(euclidean_loss)
-
+        # euclidean_loss = tf.reduce_sum(tf.sqrt(1e-9 + tf.reduce_sum(tf.square(y_t - y_p), axis=-1)), axis=-1)
+        # euclidean_loss = tf.reduce_mean(euclidean_loss)
+        # absolute_loss = tf.reduce_sum(tf.reduce_sum(tf.abs(y_t - y_p), axis=-1), axis=-1)
+        # absolute_loss = tf.reduce_mean(absolute_loss)
+        huber_loss = huber(y_t,y_p)
         temp = y_p[:, 1:, :, :]
         temp1 = y_t[:, 1:, :, :]
         v_t = tf.vectorized_map(
@@ -45,20 +48,21 @@ def build_spatio_temporal_loss(spatial_factor=0.0001, temporal_factor=0.0001):
             lambda row: tf.vectorized_map(lambda y: tf.vectorized_map(lambda x: distance_map(x, y), elems=y),
                                           elems=row), elems=y_p)
         spatial_loss = tf.reduce_mean(
-            tf.reduce_sum(tf.reduce_mean(tf.reduce_sum(tf.square(v_t - v_p), axis=-1), axis=-1) * mask,
+            tf.reduce_sum(tf.reduce_mean(tf.reduce_sum(tf.abs(v_t - v_p), axis=-1), axis=-1) * mask,
                           axis=-1) / total)
 
         mask = mask[:, 1:]
         temporal_loss = tf.reduce_mean(tf.reduce_sum(
-            tf.reduce_mean(tf.reduce_sum(tf.square((temp1 - y_t[:, :-1, :, :]) - (temp - y_p[:, :-1, :, :])), axis=-2),
+            tf.reduce_mean(tf.reduce_sum(tf.abs((temp1 - y_t[:, :-1, :, :]) - (temp - y_p[:, :-1, :, :])), axis=-2),
                            axis=-1) * mask, axis=-1) / total)
-        return euclidean_loss + (spatial_factor * spatial_loss) + (temporal_factor * temporal_loss)
+        return huber_loss + (spatial_factor * spatial_loss) + (temporal_factor * temporal_loss)
 
     return loss_fn
 
 
 def evaluate_predictions(prediction: DataStoreInterface, ground_truth: DataStoreInterface, metric_fns, sequence_len=60,
                          batch_size=60, index_limit=None, verbose=False):
+    from OptiPose.post_processor_interface import ClusterAnalysisProcess
     assert prediction.DIMENSIONS == ground_truth.DIMENSIONS
 
     if not ground_truth.verify_stats():
@@ -111,16 +115,18 @@ def evaluate_predictions(prediction: DataStoreInterface, ground_truth: DataStore
     return batch_results
 
 
-def build_batch(data_store: DataStoreInterface, begin, end, max_seq_length, is_dataset=False):
+def build_batch(data_store: DataStoreInterface, begin, end, max_seq_length, is_dataset=False,increment=1,truncate=False):
     batch = []
     BLANK = [MAGIC_NUMBER] * 3
     PAD = np.zeros((len(data_store.body_parts), 3))
-    for i in range(begin, end):
+    for i in range(begin, end,increment):
         if len(batch) >= max_seq_length:
             break
         batch.append(data_store.get_numpy(i))
         if is_dataset:
             assert not np.any(np.all(batch[-1] == BLANK, axis=1))
+            if truncate:
+                batch[-1]=batch[-1].astype(np.int)
         batch[-1] = batch[-1].tolist()
     if not is_dataset:
         while len(batch) < max_seq_length:
@@ -128,10 +134,10 @@ def build_batch(data_store: DataStoreInterface, begin, end, max_seq_length, is_d
     return batch
 
 
-def train(model, train_dataset, validation_dataset, loss_function, epochs, lr=5e-4, metrics=["mae"], callbacks=[]):
-    opt = tf.keras.optimizers.Adam(learning_rate=lr, clipnorm=1.0)
+def train(model, train_dataset, test_dataset, loss_function, epochs, lr=5e-4, metrics=["mae"], callbacks=[], clipnorm=1.0):
+    opt = tf.keras.optimizers.Adam(learning_rate=lr, clipnorm=clipnorm)
     model.compile(loss=loss_function, optimizer=opt, metrics=metrics)
-    history = model.fit(train_dataset, epochs=epochs, validation_data=validation_dataset, verbose=2,
+    history = model.fit(train_dataset, epochs=epochs, validation_data=test_dataset, verbose=2,
                         callbacks=callbacks)
     return history
 

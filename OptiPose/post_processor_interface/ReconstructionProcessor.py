@@ -3,10 +3,10 @@ import numpy as np
 from OptiPose import DLTrecon, OptiPoseConfig
 from OptiPose import Skeleton, rotate
 from OptiPose.data_store_interface import OptiPoseDataStore3D
-from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessorInterface
+from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessor
 
 
-class ReconstructionProcess(PostProcessorInterface):
+class ReconstructionProcess(PostProcessor):
     PROCESS_NAME = "Reconstruction"
 
     def __init__(self, global_config: OptiPoseConfig, source_views, data_readers, threshold, reconstruction_algorithm,
@@ -36,14 +36,13 @@ class ReconstructionProcess(PostProcessorInterface):
             for name in self.body_parts:
                 subset = [sk[name] for sk in skeleton_2D]
                 dlt_subset = self.dlt_coefficients
-                if self.reconstruction_algorithm == "auto_subset":
-                    indices = [subset[i].likelihood >= self.threshold for i in range(len(subset))]
-                    if sum(indices) >= 2:
-                        dlt_subset = dlt_subset[indices, :]
-                        subset = [element for i, element in enumerate(subset) if indices[i]]
-                recon_data[name] = rotate(DLTrecon(3, len(subset), dlt_subset, subset), self.rotation_matrix,
-                                          self.scale) + self.translation_matrix
-                prob_data[name] = min(subset, key=lambda x: x.likelihood).likelihood
+                indices = [subset[i].likelihood >= self.threshold for i in range(len(subset))]
+                if (self.reconstruction_algorithm == "auto_subset" and sum(indices) >= 2) or sum(indices)==len(self.data_readers):
+                    dlt_subset = dlt_subset[indices, :]
+                    subset = [element for i, element in enumerate(subset) if indices[i]]
+                    recon_data[name] = rotate(DLTrecon(3, len(subset), dlt_subset, subset), self.rotation_matrix,
+                                              self.scale) + self.translation_matrix
+                    prob_data[name] = min(subset, key=lambda x: x.likelihood).likelihood
             skeleton_3D = Skeleton(self.body_parts, recon_data, prob_data)
             self.out_csv.set_skeleton(iterator, skeleton_3D)
         self.progress = 100

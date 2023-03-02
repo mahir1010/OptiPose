@@ -3,7 +3,6 @@ import os
 import numpy as np
 import pandas as pd
 
-from OptiPose import MAGIC_NUMBER
 from OptiPose import convert_to_numpy
 from OptiPose.data_store_interface.DataStoreInterface import DataStoreInterface
 from OptiPose.skeleton import Skeleton, Part
@@ -44,9 +43,9 @@ class OptiPoseDataStore3D(DataStoreInterface):
     def get_marker(self, index, name) -> Part:
         if index in self.data.index:
             pt = convert_to_numpy(self.data.loc[index, name])
-            return Part(pt, name, float(not all(pt == MAGIC_NUMBER)))
+            return Part(pt, name, float(not all(pt == self.MAGIC_NUMBER)))
         else:
-            return Part([MAGIC_NUMBER] * self.DIMENSIONS, name, 0.0)
+            return Part([self.MAGIC_NUMBER] * self.DIMENSIONS, name, 0.0)
 
     def set_marker(self, index, part: Part) -> None:
         name = part.name
@@ -59,14 +58,14 @@ class OptiPoseDataStore3D(DataStoreInterface):
         likelihood_map = {}
         for name in self.body_parts:
             part_map[name] = convert_to_numpy(row[name])
-            likelihood_map[name] = float(not all(part_map[name] == MAGIC_NUMBER))
+            likelihood_map[name] = float(not all(part_map[name] == self.MAGIC_NUMBER))
         behaviour = [] if pd.isna(row['behaviour']) else row['behaviour'].split(self.BEHAVIOUR_SEP)
         return Skeleton(self.body_parts, part_map=part_map, likelihood_map=likelihood_map,
                         behaviour=behaviour)
 
     def build_part(self, arr, name):
         pt = convert_to_numpy(arr)
-        return Part(pt, name, float(not all(pt == MAGIC_NUMBER)))
+        return Part(pt, name, float(not all(pt == self.MAGIC_NUMBER)))
 
     def __init__(self, body_parts, path):
         super(OptiPoseDataStore3D, self).__init__(body_parts, path)
