@@ -86,7 +86,6 @@ class OccupancyPosturalAutoEncoderProcess(PostProcessor):
             cluster_analysis.PRINT = self.PRINT
             cluster_analysis.process(self.data_store)
             self.data_store = cluster_analysis.get_output()
-        index = 0
         self.data_ready = False
         self.progress = 0
         occupancy_ranges = [[0.7,1.0],[0.5,1.0]]

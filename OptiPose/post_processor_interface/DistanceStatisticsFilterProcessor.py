@@ -19,7 +19,7 @@ class DistanceStatisticsFilterProcess(PostProcessor):
         self.data_ready = False
         self.progress = 0
         body_parts = data_store.body_parts
-        removed_count = 0
+        removed_count = [0]*len(data_store.body_parts)
         for index, skeleton in self.data_store.row_iterator():
             self.progress = int(index / len(self.data_store) * 100)
             if self.PRINT and self.progress % 10 == 0:
@@ -39,10 +39,10 @@ class DistanceStatisticsFilterProcess(PostProcessor):
             scores = scores / max_score
             for i,score in enumerate(scores):
                 if distance_matrix[i][i] != -1 and self.threshold<score:
-                    removed_count+=1
+                    removed_count[i]+=1
                     data_store.delete_marker(index,body_parts[i])
         self.data_ready = True
-        print("\nremoved: ",removed_count)
+        print("\nremoved: ",{body_parts[k]:removed_count[k] for k in range(len(data_store.body_parts))})
         self.progress = 100
 
     def get_output(self):

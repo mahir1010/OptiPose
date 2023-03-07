@@ -24,7 +24,7 @@ class MovingAverageProcess(PostProcessor):
                 average_window.append(point)
                 if len(average_window) > self.window_size:
                     average_window.pop(0)
-                point[:] = np.mean(average_window, axis=0)
+                point[:] = np.average(average_window,weights=np.square(list(range(1,len(average_window)+1))), axis=0)
                 self.data_store.set_marker(index, point)
         self.data_ready = True
         self.progress = 100

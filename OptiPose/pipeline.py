@@ -255,14 +255,14 @@ if __name__ == '__main__':
     config = OptiPoseConfig('/home/mahirp/Projects/OptiPose/examples/example_configs/Rodent3D.yml')
     # Generate Distance Stats
 
-    data_store  = OptiPoseDataStore3D(config.body_parts,'/media/mahirp/Storage/RodentVideos/051022/sync/recon_dstat_interp_kalman.csv')
-    cluster_analysis = ClusterAnalysisProcess()
-    cluster_analysis.PRINT=True
-    cluster_analysis.process(data_store)
-    data_store = cluster_analysis.get_output()
-    num_samples = 300
+    data_store  = OptiPoseDataStore3D(config.body_parts,'/media/mahirp/Storage/RodentVideos/051022/sync/recon_0.75_auto_subset.csv')
+    # cluster_analysis = ClusterAnalysisProcess()
+    # cluster_analysis.PRINT=True
+    # cluster_analysis.process(data_store)
+    # data_store = cluster_analysis.get_output()
+    num_samples = 1000
     samples = []
-    adp_sample=random.sample(data_store.stats.accurate_data_points,min(150,len(data_store.stats.accurate_data_points)))
+    adp_sample=random.sample(data_store.stats.accurate_data_points,min(100,len(data_store.stats.accurate_data_points)))
     while len(samples)<num_samples:
         samples.extend([data_store.get_skeleton(random.randint(smpl['begin'],smpl['end'])) for smpl in adp_sample if smpl['end']-smpl['begin']>10])
     out=generate_distance_matrices(config,samples)
