@@ -1,5 +1,4 @@
 deffcode==0.2.5
-df3d==0.57
 filterpy==1.4.5
 h5py==3.8.0
 matplotlib==3.7.1
