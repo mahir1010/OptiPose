@@ -7,7 +7,7 @@ datastore_readers = {OptiPoseDataStore3D.FLAVOR: OptiPoseDataStore3D, Deeplabcut
                      FlattenedDataStore.FLAVOR: FlattenedDataStore}
 
 
-def initialize_datastore_reader(body_parts, path, reader_type):
+def initialize_datastore_reader(body_parts, path, reader_type) -> DataStoreInterface:
     try:
         reader = datastore_readers[reader_type]
         return reader(body_parts, path)

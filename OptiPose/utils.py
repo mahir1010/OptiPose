@@ -23,7 +23,8 @@ def magnitude(vector):
 
 def compute_distance_matrix(skeleton):
     return np.array(
-        [[magnitude(skeleton[p1] - skeleton[p2]) if skeleton[p1]>0 and skeleton[p2]>0 else -1 for p2 in skeleton.body_parts] for p1 in skeleton.body_parts])
+        [[magnitude(skeleton[p1] - skeleton[p2]) if skeleton[p1] > 0 and skeleton[p2] > 0 else -1 for p2 in
+          skeleton.body_parts] for p1 in skeleton.body_parts])
 
 
 def normalize_vector(vector):
@@ -40,12 +41,22 @@ def alphaBetaFilter(measurement, prevState, dt, velocity=0, acceleration=0, a=0.
     return estimate, velocity, acceleration
 
 
-def unit_spherical_coordinates(v1, is_degrees=True, is_shift=True):
+def get_spherical_coordinates(v1, is_degrees=True, is_shift=True):
     multiplier = 57.2958 if is_degrees else 1
     shift = (180 if is_degrees else math.pi) if is_shift else 0
-    unit = v1 / magnitude(v1)
-    return np.array([math.atan2(unit[1], unit[0]),
-                     math.atan2(math.sqrt(np.sum(np.square(unit[:2]))), unit[2])]) * multiplier + shift
+    v1 = v1 / magnitude(v1)
+    return np.array([math.atan2(v1[1], v1[0]),
+                     math.atan2(math.sqrt(np.sum(np.square(v1[:2]))), v1[2])]) * multiplier + shift
+
+
+def spherical_angle_difference(v1, v2, isAbs=True):
+    diff = v1 - v2
+    absDiff = np.abs(diff)
+    output = np.minimum(absDiff, 360.0 - absDiff)
+    if not isAbs:
+        output *= np.sign(diff) * (
+                    (output == absDiff) * 2 - 1)  # Maps True/False to 1/-1 [T,F]*2-1 = [1,0]*2-1 = [2,0]*-1 = [1,-1]
+    return output
 
 
 def convert_to_list(inp):
@@ -78,7 +89,7 @@ def convert_to_numpy(input_data, dimensions=3):
     return input_data
 
 
-def buildInputData(csv_data, index, seq_len=60, size=10):
+def build_input_data(csv_data, index, seq_len=60, size=10):
     PAD = np.array([[0, 0, 0]] * size)
     section = csv_data[index:min(index + seq_len, len(csv_data))].applymap(convert_to_list)
     data = list(map(convert_to_numpy, section.to_numpy()))
@@ -87,16 +98,16 @@ def buildInputData(csv_data, index, seq_len=60, size=10):
     return np.array([data], dtype='float32')
 
 
-def buildBatchInputData(csv_data, index, batch=12, seq_len=60, size=10):
+def build_batch_input_data(csv_data, index, batch=12, seq_len=60, size=10):
     PAD = np.array([[0, 0, 0]] * size)
     indices = []
     totalLen = len(csv_data)
     for i in range(index, min(index + seq_len * batch, totalLen), seq_len):
         indices.append(i)
         if i == index:
-            inp = buildInputData(csv_data, i)
+            inp = build_input_data(csv_data, i)
         else:
-            inp = np.concatenate((inp, buildInputData(csv_data, i)), axis=0)
+            inp = np.concatenate((inp, build_input_data(csv_data, i)), axis=0)
     return indices, inp
 
 
@@ -123,18 +134,21 @@ def convert_numpy_to_datastore(pickled_data: np.ndarray, header_names, flavor, o
         datastore.set_skeleton(index, skeleton)
     datastore.save_file()
 
-def update_config_dlt_coeffs(config:OptiPoseConfig,dlt_coefficients_file,order):
-    dlt_coefficients=pd.read_csv(dlt_coefficients_file,header=None)
-    for index,camera in enumerate(order):
+
+def update_config_dlt_coeffs(config: OptiPoseConfig, dlt_coefficients_file, order):
+    dlt_coefficients = pd.read_csv(dlt_coefficients_file, header=None)
+    for index, camera in enumerate(order):
         dlt_coeff = dlt_coefficients[index].tolist()
         dlt_coeff.append(1)
         config.views[camera].dlt_coefficients = np.array(dlt_coeff)
-    save_config(config.path,config.export_dict())
+    save_config(config.path, config.export_dict())
+
 
 if __name__ == "__main__":
     # import yaml
     import pickle
     import glob
+
     config = OptiPoseConfig('/home/mahirp/Projects/Pose Annotator/Resources/220406_calib_updated.yaml')
     # update_config_dlt_coeffs(OptiPoseConfig('/home/mahirp/Projects/Pose Annotator/Resources/220511_updated.yaml'),'/media/mahirp/Storage/RodentVideos/051122/Calibration/sync/051122_GOR_dltCoefs.csv',['Green','Orange','Red'])
     # config = yaml.safe_load(open('/media/mahirp/Storage/RodentVideos/TestVideos/220510/test.yaml', 'r'))
