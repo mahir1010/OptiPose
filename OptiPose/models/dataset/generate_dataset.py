@@ -34,9 +34,9 @@ def generate_dataset(root_path, dataset_name, is_test, data_stores: list, total_
     total_count = 0
     histogram_list = []
     cluster_counts = []
-    for data_store in data_stores:
+    for ds_index,data_store in enumerate(data_stores):
         if not data_store.verify_stats():
-            print('\nAnalyzing File for accurate data points')
+            print(f'\nAnalyzing File for accurate data points: {ds_index}/{len(data_stores)}')
             analysis_processor.process(data_store)
         c_count, histogram, _ = data_store.stats.get_accurate_cluster_info()
         cluster_counts.append(c_count)
@@ -49,7 +49,7 @@ def generate_dataset(root_path, dataset_name, is_test, data_stores: list, total_
         count = 0
         # samples_per_file = total_samples // (np.sum(cluster_counts) / cluster_counts[ds_index]) + 1
         samples_per_file = total_samples // len(data_stores) + 1
-        print(f"\nExtracting {samples_per_file} from file: {ds_index}")
+        print(f"\nExtracting {samples_per_file} from file: {data_store.path}")
         flag = True
         while flag:
             iteration_count = 0

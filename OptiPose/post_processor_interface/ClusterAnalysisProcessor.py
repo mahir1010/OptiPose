@@ -29,6 +29,8 @@ class ClusterAnalysisProcess(PostProcessor):
             stats.add_occupancy_data(acc_count / len(data_store.body_parts))
             if accurate:
                 stats.update_cluster_info(index, '', True)
+        if self.PRINT and self.progress % 10 == 0:
+            print(f'\r {self.PROCESS_NAME} {self.progress}% complete', end='')
         self.data_store.set_stats(stats)
         self.data_ready = True
         self.progress = 100

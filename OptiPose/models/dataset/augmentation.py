@@ -63,7 +63,7 @@ def aug_kp_cluster_missing(dataset, BLANK):
     n_kps = len(dataset[0])
     n_poses = len(dataset)
     complete = randint(1, 2) == 1
-    missing_kps = sample(list(range(n_kps)), randint(1, 3))
+    missing_kps = sample(list(range(n_kps)), randint(1, n_kps//3))
     cluster_size = randint(n_poses // 3, n_poses - 5)
     mask = [0 for kp in range(n_kps)]
     if complete:
@@ -75,7 +75,7 @@ def aug_kp_cluster_missing(dataset, BLANK):
     else:
         cluster_start = sample(list(range(0, n_poses, cluster_size)), min(1, math.ceil(n_poses / cluster_size)))
         missing_index = []
-        missing_kps = sample(list(range(n_kps)), randint(1, 3))
+        missing_kps = sample(list(range(n_kps)), randint(1, n_kps//3))
         for c in cluster_start:
             missing_index.extend([m for m in range(c, min(c + cluster_size, len(dataset)))])
         for idx in range(n_poses):
@@ -84,7 +84,7 @@ def aug_kp_cluster_missing(dataset, BLANK):
                 for n in missing_kps:
                     mask[n] += 1
             else:
-                random_missing_kps = sample(list(range(n_kps)), randint(0, 3))
+                random_missing_kps = sample(list(range(n_kps)), randint(0, n_kps//3))
                 dataset[idx] = [dataset[idx][n] if n not in random_missing_kps else BLANK.copy() for n in range(n_kps)]
                 mask = [mask[i] + 1 if i in random_missing_kps else mask[i] for i in range(n_kps)]
     return dataset, mask
