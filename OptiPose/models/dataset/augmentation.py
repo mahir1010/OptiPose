@@ -21,7 +21,7 @@ def aug_alternate_missing(dataset, BLANK):
 
 def aug_sentinals_missing(dataset, BLANK):
     n_poses = len(dataset)
-    max_missing = max(2,n_poses // 2)
+    max_missing = max(2, n_poses // 2)
     min_missing = max(1, max_missing // 3)
     direction = randint(1, 2) == 1
     if direction:

@@ -8,15 +8,15 @@ from OptiPose.utils import *
 class Tracker:
     def __init__(self, data, dt):
         self.dt = dt
-        self.tracker = self.getKalmanFilter(data)
+        self.tracker = self.get_kalman_filter(data)
 
-    def getKalmanFilter(self, data):
+    def get_kalman_filter(self, data):
         kalman = KalmanFilter(len(data) * 3, len(data))
         kalman.x = np.hstack((data, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0])).astype(np.float)
         kalman.F = np.array(
-            [[1, 0, 0, self.dt, 0, 0, 0.5 * (self.dt) ** 2, 0, 0],
-             [0, 1, 0, 0, self.dt, 0, 0, 0.5 * (self.dt) ** 2, 0],
-             [0, 0, 1, 0, 0, self.dt, 0, 0, 0.5 * (self.dt) ** 2],
+            [[1, 0, 0, self.dt, 0, 0, 0.5 * self.dt ** 2, 0, 0],
+             [0, 1, 0, 0, self.dt, 0, 0, 0.5 * self.dt ** 2, 0],
+             [0, 0, 1, 0, 0, self.dt, 0, 0, 0.5 * self.dt ** 2],
              [0, 0, 0, 1, 0, 0, self.dt, 0, 0],
              [0, 0, 0, 0, 1, 0, 0, self.dt, 0],
              [0, 0, 0, 0, 0, 1, 0, 0, self.dt],

@@ -25,8 +25,8 @@ class ClusterAnalysisProcess(PostProcessor):
                 if skeleton[part] < self.threshold:
                     stats.update_cluster_info(index, part)
                     accurate = False
-                    acc_count-=1
-            stats.add_occupancy_data(acc_count/len(data_store.body_parts))
+                    acc_count -= 1
+            stats.add_occupancy_data(acc_count / len(data_store.body_parts))
             if accurate:
                 stats.update_cluster_info(index, '', True)
         self.data_store.set_stats(stats)

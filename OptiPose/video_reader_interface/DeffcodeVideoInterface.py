@@ -25,9 +25,6 @@ class DeffcodeVideoReader(BaseVideoReaderInterface):
     def get_timestamp(self, frame_number):
         return str(timedelta(seconds=(frame_number / self.fps)))
 
-    def get_number_of_frames(self) -> int:
-        return int(self.total_frames)
-
     def __init__(self, video_path, fps, buffer_size=128):
         super().__init__(video_path, fps)
         self.buffer_size = buffer_size
@@ -38,7 +35,6 @@ class DeffcodeVideoReader(BaseVideoReaderInterface):
         self.total_frames = json.loads(self.stream.metadata)['approx_video_nframes']
         self.stream.terminate()
         self.current_index = -1
-        # self.start()
 
     def start(self):
         if self.thread is None:
@@ -57,10 +53,6 @@ class DeffcodeVideoReader(BaseVideoReaderInterface):
                 break
             if not self.buffer.full():
                 frame = next(self.stream.generateFrame(), None)
-                if frame is None:
-                    self.state = -1
-                    break
-                # self.buffer.put(cv2.resize(frame,(256,256)))
                 self.buffer.put(frame)
             else:
                 time.sleep(0.01)
@@ -78,24 +70,15 @@ class DeffcodeVideoReader(BaseVideoReaderInterface):
     def release(self):
         self.stop()
 
-    def seek_pos(self, index: int) -> None:
-        self.stop()
-        self.current_index = index - 1
-        self.start()
-        time.sleep(0.9)
-
     def next_frame(self) -> np.ndarray:
         if self.state == -1:
             return None
         elif self.state != 1:
             self.start()
         try:
-            frame = self.buffer.get()
+            self.current_frame = self.buffer.get()
             self.current_index += 1
-            return frame
+            return self.current_frame
         except Empty:
             self.stop()
             return None
-
-    def get_current_index(self) -> int:
-        return self.current_index

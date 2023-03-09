@@ -61,7 +61,7 @@ class DeeplabcutDataStore(DataStoreInterface):
             out.append(skeleton[part].likelihood)
         return out
 
-    def delete_marker(self, index, name, force_remove=False):
+    def delete_part(self, index, name, force_remove=False):
         if force_remove or index in self.data.index:
             self.data.loc[index, (self.scorer, name, 'likelihood')] = 0.0
 
@@ -74,7 +74,7 @@ class DeeplabcutDataStore(DataStoreInterface):
         else:
             return []
 
-    def get_marker(self, index, name) -> Part:
+    def get_part(self, index, name) -> Part:
         if index in self.data.index:
             return Part(
                 [self.data.loc[index, (self.scorer, name, 'x')], self.data.loc[index, (self.scorer, name, 'y')]],
@@ -82,7 +82,7 @@ class DeeplabcutDataStore(DataStoreInterface):
         else:
             return Part([self.MAGIC_NUMBER] * self.DIMENSIONS, name, 0.0)
 
-    def set_marker(self, index, part: Part) -> None:
+    def set_part(self, index, part: Part) -> None:
         name = part.name
         self.data.loc[index, (self.scorer, name, 'x')] = part[0]
         self.data.loc[index, (self.scorer, name, 'y')] = part[1]
@@ -97,11 +97,11 @@ class DeeplabcutDataStore(DataStoreInterface):
     def build_part(self, arr, name):
         return Part([arr['x'], arr['y']], name, arr['likelihood'])
 
-    def get_keypoint_slice(self, slice_indices: list, name: str) -> np.ndarray:
+    def get_part_slice(self, slice_indices: list, name: str) -> np.ndarray:
         return self.data.loc[slice_indices[0]:slice_indices[1] - 1, (self.scorer, name)].apply(
             lambda x: self.build_part(x, name), axis=1).to_numpy()
 
-    def set_keypoint_slice(self, slice_indices: list, name: str, data: np.ndarray) -> None:
+    def set_part_slice(self, slice_indices: list, name: str, data: np.ndarray) -> None:
         self.data.loc[slice_indices[0]:slice_indices[1] - 1, (self.scorer, name, 'x')] = data[:, 0]
         self.data.loc[slice_indices[0]:slice_indices[1] - 1, (self.scorer, name, 'y')] = data[:, 1]
         self.data.loc[slice_indices[0]:slice_indices[1] - 1, (self.scorer, name, 'likelihood')] = [d.likelihood for d in

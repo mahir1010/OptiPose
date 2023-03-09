@@ -45,7 +45,7 @@ class FlattenedDataStore(DataStoreInterface):
         self.data.sort_index(inplace=True)
         self.data.to_csv(path, index=False, sep=self.SEP)
 
-    def delete_marker(self, index, name, force_remove=False):
+    def delete_part(self, index, name, force_remove=False):
         if force_remove or index in self.data.index:
             self.data.loc[index, [f"{name}_{i}" for i in range(1, self.DIMENSIONS + 1)]] = pd.NA
 
@@ -58,16 +58,16 @@ class FlattenedDataStore(DataStoreInterface):
         else:
             return []
 
-    def get_keypoint_slice(self, slice_indices: list, name: str) -> np.ndarray:
+    def get_part_slice(self, slice_indices: list, name: str) -> np.ndarray:
         return self.data.loc[slice_indices[0]:slice_indices[1] - 1,
                [f"{name}_{i}" for i in range(1, self.DIMENSIONS + 1)]].apply(
             lambda x: self.build_part(x, name), axis=1).to_numpy()
 
-    def set_keypoint_slice(self, slice_indices: list, name: str, data: np.ndarray) -> None:
+    def set_part_slice(self, slice_indices: list, name: str, data: np.ndarray) -> None:
         for i in range(1, self.DIMENSIONS + 1):
             self.data.loc[slice_indices[0]:slice_indices[1] - 1, f"{name}_{i}"] = [d[i - 1] for d in data]
 
-    def get_marker(self, index, name) -> Part:
+    def get_part(self, index, name) -> Part:
         if index in self.data.index:
             pt = np.array([self.data.loc[index, f"{name}_{i}"] for i in range(1, self.DIMENSIONS + 1)])
             if any(np.isnan(pt)):
@@ -76,7 +76,7 @@ class FlattenedDataStore(DataStoreInterface):
         else:
             return Part([self.MAGIC_NUMBER] * self.DIMENSIONS, name, 0.0)
 
-    def set_marker(self, index, part: Part) -> None:
+    def set_part(self, index, part: Part) -> None:
         name = part.name
         for i in range(1, part.shape[0] + 1):
             self.data.loc[index, f"{name}_{i}"] = part[i - 1] if part[i - 1] != self.MAGIC_NUMBER else pd.NA

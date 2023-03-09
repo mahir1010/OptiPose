@@ -36,7 +36,7 @@ class GenerateVelocityProcess(PostProcessor):
                     previous_index = index
                 else:
                     velocity = [MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER]
-            empty_datastore.set_marker(index, Part(velocity, self.target_column, float(flag)))
+            empty_datastore.set_part(index, Part(velocity, self.target_column, float(flag)))
         if self.PRINT:
             print(f'\r {self.PROCESS_NAME} 100% complete', end='')
         self.data_ready = True

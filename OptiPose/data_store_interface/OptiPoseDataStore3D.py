@@ -18,7 +18,7 @@ class OptiPoseDataStore3D(DataStoreInterface):
         self.data.sort_index(inplace=True)
         self.data.to_csv(path, index=False, sep=self.SEP)
 
-    def delete_marker(self, index, name, force_remove=False):
+    def delete_part(self, index, name, force_remove=False):
         if force_remove or index in self.data.index:
             self.data.loc[index, name] = pd.NA
 
@@ -31,23 +31,23 @@ class OptiPoseDataStore3D(DataStoreInterface):
         else:
             return []
 
-    def get_keypoint_slice(self, slice_indices: list, name: str) -> np.ndarray:
+    def get_part_slice(self, slice_indices: list, name: str) -> np.ndarray:
         return self.data.loc[slice_indices[0]:slice_indices[1] - 1, name].map(
             lambda x: self.build_part(x, name)).to_numpy()
 
-    def set_keypoint_slice(self, slice_indices: list, name: str, data: np.ndarray) -> None:
+    def set_part_slice(self, slice_indices: list, name: str, data: np.ndarray) -> None:
         place_holder = np.empty((data.shape[0],), dtype=np.object)
         place_holder[:] = data.tolist()
         self.data.loc[slice_indices[0]:slice_indices[1] - 1, name] = place_holder
 
-    def get_marker(self, index, name) -> Part:
+    def get_part(self, index, name) -> Part:
         if index in self.data.index:
             pt = convert_to_numpy(self.data.loc[index, name])
             return Part(pt, name, float(not all(pt == self.MAGIC_NUMBER)))
         else:
             return Part([self.MAGIC_NUMBER] * self.DIMENSIONS, name, 0.0)
 
-    def set_marker(self, index, part: Part) -> None:
+    def set_part(self, index, part: Part) -> None:
         name = part.name
         self.data.loc[index, name] = str(part.tolist())
         if not self.data.index.is_monotonic_increasing:

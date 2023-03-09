@@ -10,7 +10,7 @@ class LinearInterpolationProcess(PostProcessor):
         self.threshold = threshold
         self.max_cluster_size = max_cluster_size
 
-    def process(self, data_store,parallel=False):
+    def process(self, data_store, parallel=False):
         self.data_store = data_store
         self.data_ready = False
         self.progress = 0
@@ -22,13 +22,13 @@ class LinearInterpolationProcess(PostProcessor):
             if candidate['begin'] == 0 or candidate['end'] == len(self.data_store) - 1:
                 continue
             if candidate['end'] - candidate['begin'] < self.max_cluster_size:
-                begin = self.data_store.get_marker(candidate['begin'] - 1, self.target_column)
-                end = self.data_store.get_marker(candidate['end'] + 1, self.target_column)
+                begin = self.data_store.get_part(candidate['begin'] - 1, self.target_column)
+                end = self.data_store.get_part(candidate['end'] + 1, self.target_column)
                 vector = (end - begin) / (candidate['end'] - candidate['begin'] + 2)
                 current = begin + vector
                 current.likelihood = self.threshold
                 for i in range(candidate['begin'], candidate['end'] + 1):
-                    self.data_store.set_marker(i, current)
+                    self.data_store.set_part(i, current)
                     current += vector
         self.data_ready = True
         self.progress = 100

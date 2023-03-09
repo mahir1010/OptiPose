@@ -8,7 +8,6 @@ from OptiPose import MAGIC_NUMBER
 from OptiPose.data_store_interface import DataStoreInterface
 
 
-
 @tf.function
 def distance_map(ref, points):
     return tf.vectorized_map(fn=lambda t: tf.keras.backend.sqrt(1e-9 + tf.reduce_sum(tf.keras.backend.square(ref - t))),
@@ -38,7 +37,7 @@ def build_spatio_temporal_loss(spatial_factor=0.0001, temporal_factor=0.0001):
         # euclidean_loss = tf.reduce_mean(euclidean_loss)
         # absolute_loss = tf.reduce_sum(tf.reduce_sum(tf.abs(y_t - y_p), axis=-1), axis=-1)
         # absolute_loss = tf.reduce_mean(absolute_loss)
-        huber_loss = huber(y_t,y_p)
+        huber_loss = huber(y_t, y_p)
         temp = y_p[:, 1:, :, :]
         temp1 = y_t[:, 1:, :, :]
         v_t = tf.vectorized_map(
@@ -115,18 +114,19 @@ def evaluate_predictions(prediction: DataStoreInterface, ground_truth: DataStore
     return batch_results
 
 
-def build_batch(data_store: DataStoreInterface, begin, end, max_seq_length, is_dataset=False,increment=1,truncate=False):
+def build_batch(data_store: DataStoreInterface, begin, end, max_seq_length, is_dataset=False, increment=1,
+                truncate=False):
     batch = []
     BLANK = [MAGIC_NUMBER] * 3
     PAD = np.zeros((len(data_store.body_parts), 3))
-    for i in range(begin, end,increment):
+    for i in range(begin, end, increment):
         if len(batch) >= max_seq_length:
             break
         batch.append(data_store.get_numpy(i))
         if is_dataset:
             assert not np.any(np.all(batch[-1] == BLANK, axis=1))
             if truncate:
-                batch[-1]=batch[-1].astype(np.int)
+                batch[-1] = batch[-1].astype(np.int)
         batch[-1] = batch[-1].tolist()
     if not is_dataset:
         while len(batch) < max_seq_length:
@@ -134,7 +134,8 @@ def build_batch(data_store: DataStoreInterface, begin, end, max_seq_length, is_d
     return batch
 
 
-def train(model, train_dataset, test_dataset, loss_function, epochs, lr=5e-4, metrics=["mae"], callbacks=[], clipnorm=1.0):
+def train(model, train_dataset, test_dataset, loss_function, epochs, lr=5e-4, metrics=["mae"], callbacks=[],
+          clipnorm=1.0):
     opt = tf.keras.optimizers.Adam(learning_rate=lr, clipnorm=clipnorm)
     model.compile(loss=loss_function, optimizer=opt, metrics=metrics)
     history = model.fit(train_dataset, epochs=epochs, validation_data=test_dataset, verbose=2,

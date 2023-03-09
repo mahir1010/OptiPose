@@ -8,8 +8,6 @@ from OptiPose import MAGIC_NUMBER
 class Part(np.ndarray):
 
     def __new__(cls, arr, name, likelihood):
-        # if len(arr) == 2:
-        #     arr = np.append(arr, .0)
         obj = np.asarray(arr).view(cls)
         obj.name = name
         obj.likelihood = likelihood
@@ -47,6 +45,7 @@ class Part(np.ndarray):
 
     def numpy(self):
         return np.array(self)
+
 
 class Skeleton:
     def __init__(self, body_parts: list, part_map: dict = None, likelihood_map: dict = None, behaviour=[], dims=3):

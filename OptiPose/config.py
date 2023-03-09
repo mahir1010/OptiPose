@@ -28,6 +28,7 @@ class CameraViews:
             'principal_point': self.principal_point.tolist()
         }
 
+
 class AnnotationConfig:
     def __init__(self, data_dictionary):
         self.view = data_dictionary.get('view', None)
@@ -44,6 +45,7 @@ class AnnotationConfig:
                 'video_file': self.video_file,
                 'video_reader': self.video_reader
                 }
+
 
 class OptiPoseConfig:
     ENABLE_FLOW_STYLE = ['name', 'output_folder', 'threshold', 'reprojection_toolbox', 'behaviours', 'body_parts',
@@ -76,7 +78,7 @@ class OptiPoseConfig:
                                         dtype=np.float)
         assert self.rotation_matrix.shape == (3, 3)
         self.scale = float(self.data_dictionary['OptiPose'].get('scale', 1.0))
-        self.computed_scale = self.data_dictionary['OptiPose'].get('computed_scale',self.scale)
+        self.computed_scale = self.data_dictionary['OptiPose'].get('computed_scale', self.scale)
         self.translation_matrix = np.array(self.data_dictionary['OptiPose'].get('translation_matrix', [0, 0, 0]),
                                            dtype=np.float)
         self.reconstruction_algorithm = self.data_dictionary.get('reconstruction_algorithm', 'default')
@@ -86,7 +88,7 @@ class OptiPoseConfig:
                 'output_folder': self.output_folder,
                 'body_parts': self.body_parts,
                 'skeleton': self.skeleton,
-                'annotation' :{view: self.annotation_views[view].export_dict() for view in self.annotation_views},
+                'annotation': {view: self.annotation_views[view].export_dict() for view in self.annotation_views},
                 'colors': self.colors,
                 'views': {view: self.views[view].export_dict() for view in self.views},
                 'OptiPose': {

@@ -37,7 +37,8 @@ class ReconstructionProcess(PostProcessor):
                 subset = [sk[name] for sk in skeleton_2D]
                 dlt_subset = self.dlt_coefficients
                 indices = [subset[i].likelihood >= self.threshold for i in range(len(subset))]
-                if (self.reconstruction_algorithm == "auto_subset" and sum(indices) >= 2) or sum(indices)==len(self.data_readers):
+                if (self.reconstruction_algorithm == "auto_subset" and sum(indices) >= 2) or sum(indices) == len(
+                        self.data_readers):
                     dlt_subset = dlt_subset[indices, :]
                     subset = [element for i, element in enumerate(subset) if indices[i]]
                     recon_data[name] = rotate(DLTrecon(3, len(subset), dlt_subset, subset), self.rotation_matrix,

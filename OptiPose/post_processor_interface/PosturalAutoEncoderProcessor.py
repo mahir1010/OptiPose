@@ -18,7 +18,7 @@ class SequentialPosturalAutoEncoderProcess(PostProcessor):
         self.model = optipose_postural_autoencoder(window_size, config.num_parts, n_pcm, n_scm, n_heads,
                                                    output_dim, weights)
         self.overlap = max(overlap, 0)
-        self.translation_vector = np.array(translation_vector,dtype=np.float32)
+        self.translation_vector = np.array(translation_vector, dtype=np.float32)
 
     def process(self, data_store):
         batch_size = 1
@@ -41,14 +41,14 @@ class SequentialPosturalAutoEncoderProcess(PostProcessor):
                 if end == len(data_store) - 1:
                     break
             model_input = np.array(batch, dtype=np.float32)
-            translation_mask  = np.all(model_input!=[MAGIC_NUMBER,MAGIC_NUMBER,MAGIC_NUMBER],axis=-1)
+            translation_mask = np.all(model_input != [MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER], axis=-1)
             translation_matrix = np.zeros_like(model_input)
-            translation_matrix[translation_mask]=self.translation_vector
+            translation_matrix[translation_mask] = self.translation_vector
             model_input += translation_matrix
-            model_output = self.model.predict(model_input, verbose=0)-translation_matrix
+            model_output = self.model.predict(model_input, verbose=0) - translation_matrix
             for sequence, indices in zip(model_output, batch_indices):
                 for i, name in enumerate(self.config.body_parts):
-                    data_store.set_keypoint_slice(indices, name, sequence[:indices[1] - indices[0], i, :])
+                    data_store.set_part_slice(indices, name, sequence[:indices[1] - indices[0], i, :])
             if end == len(data_store) - 1:
                 break
 
@@ -88,7 +88,7 @@ class OccupancyPosturalAutoEncoderProcess(PostProcessor):
             self.data_store = cluster_analysis.get_output()
         self.data_ready = False
         self.progress = 0
-        occupancy_ranges = [[0.7,1.0],[0.5,1.0]]
+        occupancy_ranges = [[0.7, 1.0], [0.5, 1.0]]
         current_occupancy_data = np.array(self.data_store.stats.occupancy_data)
         for occupancy_range in occupancy_ranges:
             if self.PRINT:
@@ -110,7 +110,7 @@ class OccupancyPosturalAutoEncoderProcess(PostProcessor):
                         break
                     begin = cluster['begin']
                     end = min(cluster['begin'] + self.window_size, cluster['end'])
-                    current_occupancy_data[begin:end+1]=1.0
+                    current_occupancy_data[begin:end + 1] = 1.0
                     batch.append(np.array(build_batch(data_store, begin, end, self.window_size)))
                     batch_indices.append([begin, end])
                     cluster['begin'] = end
@@ -119,7 +119,7 @@ class OccupancyPosturalAutoEncoderProcess(PostProcessor):
                     model_output = self.model.predict(model_input, verbose=0)
                     for sequence, indices in zip(model_output, batch_indices):
                         for i, name in enumerate(self.config.body_parts):
-                            data_store.set_keypoint_slice(indices, name, sequence[:indices[1] - indices[0], i, :])
+                            data_store.set_part_slice(indices, name, sequence[:indices[1] - indices[0], i, :])
                 self.data_store.stats.occupancy_data = current_occupancy_data.tolist()
         self.data_ready = True
         self.progress = 100

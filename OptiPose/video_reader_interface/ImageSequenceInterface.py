@@ -19,19 +19,14 @@ class ImageSequenceReader(BaseVideoReaderInterface):
 
     def next_frame(self) -> np.ndarray:
         self.frame_number += 1
-        return cv2.cvtColor(cv2.imread(self.images[self.frame_number]), cv2.COLOR_BGR2RGB)
-
-    def get_current_index(self) -> int:
-        return self.frame_number
+        self.current_frame = cv2.cvtColor(cv2.imread(self.images[self.frame_number]), cv2.COLOR_BGR2RGB)
+        return self.current_frame
 
     def release(self) -> None:
         pass
 
     def pause(self) -> None:
         pass
-
-    def get_number_of_frames(self) -> int:
-        return len(self.images)
 
     def __init__(self, name, video_path, fps, file_formats=['[jJ][pP][gG]', '[pP][nN][gG]', '[bB][mM][pP]']):
         super(ImageSequenceReader, self).__init__(name, video_path, fps)

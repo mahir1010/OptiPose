@@ -1,4 +1,6 @@
-import numpy as np,os
+import numpy as np
+import os
+
 from OptiPose import OptiPoseConfig, rotate, Part
 from OptiPose.DLT import DLTdecon
 from OptiPose.data_store_interface import DeeplabcutDataStore
@@ -17,13 +19,15 @@ class DeconstructionProcess(PostProcessor):
         assert self.rotation_matrix.shape == (3, 3)
         self.scale = scale
         self.translation_matrix = np.array(global_config.translation_matrix) * self.scale
-        self.file_prefix=file_prefix
+        self.file_prefix = file_prefix
         if file_prefix is not None:
-            self.file_prefix = os.path.join(global_config.output_folder,file_prefix)
+            self.file_prefix = os.path.join(global_config.output_folder, file_prefix)
         assert self.translation_matrix.shape == (3,)
 
     def process(self, data_store):
-        out_files = [DeeplabcutDataStore(data_store.body_parts, f'{data_store.base_file_path if self.file_prefix is None else self.file_prefix}_{target_view}.csv') for
+        out_files = [DeeplabcutDataStore(data_store.body_parts,
+                                         f'{data_store.base_file_path if self.file_prefix is None else self.file_prefix}_{target_view}.csv')
+                     for
                      target_view in self.target_views]
         self.data_ready = False
         self.progress = 0
@@ -32,12 +36,13 @@ class DeconstructionProcess(PostProcessor):
             if self.PRINT and self.progress % 10 == 0:
                 print(f'\r{self.progress}% complete', end='')
             for part in data_store.body_parts:
-                if skeleton[part]>0:
-                    raw_part_3d = rotate(np.array(skeleton[part])-self.translation_matrix, self.rotation_matrix, self.scale, True)
+                if skeleton[part] > 0:
+                    raw_part_3d = rotate(np.array(skeleton[part]) - self.translation_matrix, self.rotation_matrix,
+                                         self.scale, True)
                     parts_2d = np.round(DLTdecon(self.dlt_coefficients, raw_part_3d, 3, len(self.target_views)))[0,
                                :].reshape(len(self.target_views), 2)
                     for part_2d, data_store_2d in zip(parts_2d, out_files):
-                        data_store_2d.set_marker(index, Part(part_2d, part, 1.0))
+                        data_store_2d.set_part(index, Part(part_2d, part, 1.0))
         self.progress = 100
         for file in out_files:
             file.save_file()

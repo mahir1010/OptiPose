@@ -13,7 +13,7 @@ TEST_FILE_SIZE = 6500
 
 def generate_dataset(root_path, dataset_name, is_test, data_stores: list, total_samples, max_seq_length=60,
                      min_seq_length=2, prefix="", suffix="", min_x=-100, max_x=1100, min_y=-100, max_y=1100, scale=1.0,
-                     random_noise=10,min_standard_deviation=None,max_skip=0,truncate=False):
+                     random_noise=10, min_standard_deviation=None, max_skip=0, truncate=False):
     assert 2 < min_seq_length <= max_seq_length
     file_name = f"{prefix}_{dataset_name}_{suffix}_{max_seq_length}_{total_samples}{'_test' if is_test else ''}.csv"
     # samples_per_file = total_samples // len(data_stores) if not is_test else (TEST_FILE_SIZE // len(data_stores))
@@ -38,7 +38,7 @@ def generate_dataset(root_path, dataset_name, is_test, data_stores: list, total_
         if not data_store.verify_stats():
             print('\nAnalyzing File for accurate data points')
             analysis_processor.process(data_store)
-        c_count, histogram,_ = data_store.stats.get_accurate_cluster_info()
+        c_count, histogram, _ = data_store.stats.get_accurate_cluster_info()
         cluster_counts.append(c_count)
         histogram_list.append(histogram)
     for histogram in histogram_list[1:]:
@@ -48,16 +48,16 @@ def generate_dataset(root_path, dataset_name, is_test, data_stores: list, total_
     for ds_index, data_store in enumerate(data_stores):
         count = 0
         # samples_per_file = total_samples // (np.sum(cluster_counts) / cluster_counts[ds_index]) + 1
-        samples_per_file = total_samples//len(data_stores)+1
+        samples_per_file = total_samples // len(data_stores) + 1
         print(f"\nExtracting {samples_per_file} from file: {ds_index}")
         flag = True
         while flag:
-            iteration_count=0
+            iteration_count = 0
             for dp in data_store.stats.iter_accurate_clusters():
-                skip = (sample(list(range(max_skip)),1)[0] if max_skip!=0 else 0) + 1
-                while skip>1:
+                skip = (sample(list(range(max_skip)), 1)[0] if max_skip != 0 else 0) + 1
+                while skip > 1:
                     if dp['end'] - dp['begin'] < min_seq_length * skip:
-                        skip-=1
+                        skip -= 1
                     else:
                         break
 
@@ -66,11 +66,13 @@ def generate_dataset(root_path, dataset_name, is_test, data_stores: list, total_
                     break
                 if count % 200 == 0:
                     print(f'\r {total_count}/{total_samples}', end='')
-                if dp['end'] - dp['begin'] > min_seq_length*skip:
-                    begin = randint(dp['begin'], dp['end'] - min_seq_length*skip)
-                    end = randint(begin + min_seq_length*skip, dp['end'])
-                    labels = build_batch(data_store, begin, end + 1, max_seq_length, True,increment=skip,truncate=truncate)
-                    if iteration_count<4 and min_standard_deviation is not None and np.std(labels,axis=0).max()<min_standard_deviation:
+                if dp['end'] - dp['begin'] > min_seq_length * skip:
+                    begin = randint(dp['begin'], dp['end'] - min_seq_length * skip)
+                    end = randint(begin + min_seq_length * skip, dp['end'])
+                    labels = build_batch(data_store, begin, end + 1, max_seq_length, True, increment=skip,
+                                         truncate=truncate)
+                    if iteration_count < 4 and min_standard_deviation is not None and np.std(labels,
+                                                                                             axis=0).max() < min_standard_deviation:
                         continue
                     pick = randint(1, 100)
                     is_auto_encoder = False
@@ -95,7 +97,7 @@ def generate_dataset(root_path, dataset_name, is_test, data_stores: list, total_
                                                                  static_scale=scale)
                     if randint(1, 5) == 1 or is_auto_encoder:
                         inputs = add_random_noise(inputs, random_noise, is_auto_encoder)
-                    avg_length_list = avg_length_list + (len(inputs)-avg_length_list)/(count+1)
+                    avg_length_list = avg_length_list + (len(inputs) - avg_length_list) / (count + 1)
 
                     while len(inputs) != max_seq_length:
                         inputs.append(PAD)
@@ -112,7 +114,7 @@ def generate_dataset(root_path, dataset_name, is_test, data_stores: list, total_
     if len(batch_rows) > 0:
         writer.writerows(batch_rows)
     print('\n', avg_mask)
-    print('average length',avg_length_list)
+    print('average length', avg_length_list)
 
 
 def plot_pose(pose, vectors, axes=None, alpha=1.0, original=False, limits=[[0, 1000]] * 3):

@@ -26,7 +26,7 @@ class KalmanFilterProcess(PostProcessor):
                     # new_tracker.tracker.P = tracker.tracker.P.copy()
                     del tracker
                     # tracker = new_tracker
-                    tracker=None
+                    tracker = None
                 else:
                     if tracker is None:
                         tracker = Tracker(point, self.dt)
@@ -34,7 +34,7 @@ class KalmanFilterProcess(PostProcessor):
                     else:
                         # self.data.append(tracker.update(point).tolist())
                         point[:3] = tracker.update(point).tolist()
-                        self.data_store.set_marker(index, point)
+                        self.data_store.set_part(index, point)
             else:
                 if point < self.threshold:
                     if tracker is not None:
@@ -42,7 +42,7 @@ class KalmanFilterProcess(PostProcessor):
                         p = tracker.update(p).tolist()
                         # self.data.append(p)
                         point[:3] = p
-                        self.data_store.set_marker(index, point)
+                        self.data_store.set_part(index, point)
                     else:
                         self.data.append(None)
                 else:
@@ -52,7 +52,7 @@ class KalmanFilterProcess(PostProcessor):
                     else:
                         # self.data.append(tracker.update(point).tolist())
                         point[:3] = tracker.update(point).tolist()
-                        self.data_store.set_marker(index, point)
+                        self.data_store.set_part(index, point)
         self.data_ready = True
         self.progress = 100
 

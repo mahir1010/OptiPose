@@ -20,7 +20,7 @@ class MedianDistanceFilterProcess(PostProcessor):
                          for p in self.data_store.body_parts])
                     distances = distances[distances != 0]
                     if len(distances) != 0 and np.median(distances) > self.distance_threshold:
-                        self.data_store.delete_marker(index, part)
+                        self.data_store.delete_part(index, part)
         self.data_ready = True
         self.progress = 100
 

@@ -22,6 +22,7 @@ class DataStoreInterface(ABC):
         Args:
             body_parts: list of column names
             path: path to data file
+            dimension: data dimension
         """
         self.body_parts = body_parts
         self.data = None
@@ -30,7 +31,7 @@ class DataStoreInterface(ABC):
         self.base_file_path = os.path.splitext(self.path)[0] if self.path is not None else None
         self.DIMENSIONS = dimension
         if os.path.exists(f'{self.base_file_path}_stats.bin'):
-            self.stats : DataStoreStats= pickle.load(open(f'{self.base_file_path}_stats.bin', 'rb'))
+            self.stats: DataStoreStats = pickle.load(open(f'{self.base_file_path}_stats.bin', 'rb'))
 
     def get_skeleton(self, index) -> Skeleton:
         if index in self.data.index:
@@ -48,7 +49,7 @@ class DataStoreInterface(ABC):
                     break
         if insert or force_insert:
             for part in self.body_parts:
-                self.set_marker(index, skeleton[part])
+                self.set_part(index, skeleton[part])
             self.set_behaviour(index, skeleton.behaviour)
 
     def get_numpy(self, index):
@@ -59,7 +60,7 @@ class DataStoreInterface(ABC):
     def delete_skeleton(self, index):
         if index in self.data.index:
             for part in self.body_parts:
-                self.delete_marker(index, part, True)
+                self.delete_part(index, part, True)
 
     @abstractmethod
     def set_behaviour(self, index, behaviour: str) -> None:
@@ -70,11 +71,11 @@ class DataStoreInterface(ABC):
         pass
 
     @abstractmethod
-    def get_keypoint_slice(self, slice_indices: list, name: str) -> np.ndarray:
+    def get_part_slice(self, slice_indices: list, name: str) -> np.ndarray:
         pass
 
     @abstractmethod
-    def set_keypoint_slice(self, slice_indices: list, name: str, data: np.ndarray) -> None:
+    def set_part_slice(self, slice_indices: list, name: str, data: np.ndarray) -> None:
         pass
 
     def row_iterator(self):
@@ -86,15 +87,15 @@ class DataStoreInterface(ABC):
             yield index, self.build_part(row, part)
 
     @abstractmethod
-    def get_marker(self, index, name) -> Part:
+    def get_part(self, index, name) -> Part:
         pass
 
     @abstractmethod
-    def set_marker(self, index, part: Part) -> None:
+    def set_part(self, index, part: Part) -> None:
         pass
 
     @abstractmethod
-    def delete_marker(self, index, name, force_remove=False):
+    def delete_part(self, index, name, force_remove=False):
         pass
 
     @abstractmethod
@@ -225,23 +226,24 @@ class DataStoreStats:
                     cluster['begin'] = cluster['end'] = index
         return pose_data
 
-    def intersect_accurate_data_points(self,accurate_clusters):
+    def intersect_accurate_data_points(self, accurate_clusters):
         output_accurate_cluster = []
         source_index = 0
         target_index = 0
-        while source_index<len(self.accurate_data_points) and target_index<len(accurate_clusters):
-            if self.accurate_data_points[source_index]['end']< accurate_clusters[target_index]['begin']:
-                source_index+=1
+        while source_index < len(self.accurate_data_points) and target_index < len(accurate_clusters):
+            if self.accurate_data_points[source_index]['end'] < accurate_clusters[target_index]['begin']:
+                source_index += 1
                 continue
-            if self.accurate_data_points[source_index]['begin']> accurate_clusters[target_index]['end']:
-                target_index+=1
+            if self.accurate_data_points[source_index]['begin'] > accurate_clusters[target_index]['end']:
+                target_index += 1
                 continue
-            output_accurate_cluster.append({'begin':max(self.accurate_data_points[source_index]['begin'],
-                                                        accurate_clusters[target_index]['begin']),
-                                            'end':min(self.accurate_data_points[source_index]['end'],
-                                                        accurate_clusters[target_index]['end'])})
-            if source_index+1<len(self.accurate_data_points) and self.accurate_data_points[source_index+1]['begin']<=accurate_clusters[target_index]['end']:
-                source_index+=1
+            output_accurate_cluster.append({'begin': max(self.accurate_data_points[source_index]['begin'],
+                                                         accurate_clusters[target_index]['begin']),
+                                            'end': min(self.accurate_data_points[source_index]['end'],
+                                                       accurate_clusters[target_index]['end'])})
+            if source_index + 1 < len(self.accurate_data_points) and self.accurate_data_points[source_index + 1][
+                'begin'] <= accurate_clusters[target_index]['end']:
+                source_index += 1
             else:
-                target_index+=1
+                target_index += 1
         return output_accurate_cluster

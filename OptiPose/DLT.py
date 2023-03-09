@@ -235,7 +235,7 @@ def DLTdecon(Ls, xyz, nd=3, nc=2):
      xyz is point coordinates in object space, accept multiple points
     Outputs:
      uvs: the coordinates of the point in the image 2D space of each camera. 
-         each inputs corresponds to one 3D point
+         each inputs correspond to one 3D point
          every two columns is a pair of (u,v) in one camera view
     '''
     # Convert Ls to array:

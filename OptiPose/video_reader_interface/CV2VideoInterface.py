@@ -21,9 +21,6 @@ class CV2VideoReader(BaseVideoReaderInterface):
 
     FLAVOR = "opencv"
 
-    def get_number_of_frames(self) -> int:
-        return int(self.total_frames)
-
     def __init__(self, video_path, fps, buffer_size=64):
         super().__init__(video_path, fps)
         self.buffer_size = buffer_size
@@ -32,8 +29,6 @@ class CV2VideoReader(BaseVideoReaderInterface):
         self.buffer = Queue(maxsize=buffer_size)
         self.stream = cv2.VideoCapture(self.video_path)
         self.total_frames = int(self.stream.get(cv2.CAP_PROP_FRAME_COUNT))
-        self.current_index = -1
-        # self.start()
 
     def start(self):
         if self.thread is None:
@@ -51,13 +46,10 @@ class CV2VideoReader(BaseVideoReaderInterface):
                 break
             if not self.buffer.full():
                 ret, frame = self.stream.read()
-                if not ret:
-                    self.state = -1
-                    break
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 self.buffer.put(frame)
             else:
-                time.sleep(0.05)
+                time.sleep(0.01)
 
     def stop(self):
         if self.thread:
@@ -72,24 +64,15 @@ class CV2VideoReader(BaseVideoReaderInterface):
         self.stop()
         self.stream.release()
 
-    def seek_pos(self, index: int) -> None:
-        self.stop()
-        self.current_index = index - 1
-        self.start()
-        time.sleep(0.01)
-
     def next_frame(self) -> np.ndarray:
         if self.state == -1:
             return None
         elif self.state != 1:
             self.start()
         try:
-            frame = self.buffer.get(timeout=0.5)
+            self.current_frame = self.buffer.get(timeout=0.5)
             self.current_index += 1
-            return frame
+            return self.current_frame
         except Empty:
             self.stop()
             return None
-
-    def get_current_index(self) -> int:
-        return self.current_index
