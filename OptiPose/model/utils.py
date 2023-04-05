@@ -3,9 +3,9 @@ from random import uniform
 
 import numpy as np
 import tensorflow as tf
-
-from OptiPose import MAGIC_NUMBER
-from OptiPose.data_store_interface import DataStoreInterface
+from cvkit import MAGIC_NUMBER
+from cvkit.pose_estimation.data_readers import DataStoreInterface
+from cvkit.pose_estimation.post_processors.util import ClusterAnalysis
 
 
 @tf.function
@@ -32,11 +32,6 @@ def build_spatio_temporal_loss(spatial_factor=0.0001, temporal_factor=0.0001):
         mask = tf.cast(tf.logical_not(tf.reduce_all(tf.reduce_all(y_t == 0, axis=-1), axis=-1)),
                        dtype=tf.float32)  # bx30
         total = tf.reduce_sum(mask, axis=-1)
-        # bx30x20x3
-        # euclidean_loss = tf.reduce_sum(tf.sqrt(1e-9 + tf.reduce_sum(tf.square(y_t - y_p), axis=-1)), axis=-1)
-        # euclidean_loss = tf.reduce_mean(euclidean_loss)
-        # absolute_loss = tf.reduce_sum(tf.reduce_sum(tf.abs(y_t - y_p), axis=-1), axis=-1)
-        # absolute_loss = tf.reduce_mean(absolute_loss)
         huber_loss = huber(y_t, y_p)
         temp = y_p[:, 1:, :, :]
         temp1 = y_t[:, 1:, :, :]
@@ -61,11 +56,10 @@ def build_spatio_temporal_loss(spatial_factor=0.0001, temporal_factor=0.0001):
 
 def evaluate_predictions(prediction: DataStoreInterface, ground_truth: DataStoreInterface, metric_fns, sequence_len=60,
                          batch_size=60, index_limit=None, verbose=False):
-    from OptiPose.post_processor_interface import ClusterAnalysisProcess
     assert prediction.DIMENSIONS == ground_truth.DIMENSIONS
 
     if not ground_truth.verify_stats():
-        analysis_process = ClusterAnalysisProcess()
+        analysis_process = ClusterAnalysis()
         analysis_process.PRINT = True
         analysis_process.process(ground_truth)
         ground_truth = analysis_process.get_output()

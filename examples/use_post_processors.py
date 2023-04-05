@@ -1,9 +1,12 @@
-from OptiPose import OptiPoseConfig
-from OptiPose.data_store_interface import FlattenedDataStore
-from OptiPose.post_processor_interface import *
+from cvkit.pose_estimation.data_readers import FlattenedDataStore
+from cvkit.pose_estimation.post_processors.util import *
+from cvkit.pose_estimation.post_processors.filter import *
+from cvkit.pose_estimation.post_processors.generative import *
+
+from cvkit.pose_estimation.config import PoseEstimationConfig
 
 # Define Column names or body parts (order in csv file does not matter)
-acinoset_config = OptiPoseConfig('./example_configs/AcinoSet.yml')
+acinoset_config = PoseEstimationConfig('./example_configs/AcinoSet.yml')
 
 data_file = FlattenedDataStore(acinoset_config.body_parts, './AcinoSet_Files/20190227RomeoRun.csv')
 
@@ -15,11 +18,11 @@ data_file = FlattenedDataStore(acinoset_config.body_parts, './AcinoSet_Files/201
 # Some post processors are column based and can be parallelized independently.
 
 # Threshold doesn't matter for OptiPose yet. The data is either valid(>0) or invalid(<=0).
-post_processors = [ClusterAnalysisProcess(threshold=0.6),
-                   LinearInterpolationProcess("nose"),  # Not parallel here
-                   LinearInterpolationProcess("l_eye"),  # Not parallel here
-                   KalmanFilterProcess("l_eye", framerate=acinoset_config.framerate),
-                   MovingAverageProcess("nose", window_size=3, threshold=0.6)
+post_processors = [ClusterAnalysis(threshold=0.6),
+                   LinearInterpolationFilter("nose"),  # Not parallel here
+                   LinearInterpolationFilter("l_eye"),  # Not parallel here
+                   KalmanFilter("l_eye", framerate=acinoset_config.framerate),
+                   MovingAverageFilter("nose", window_size=3, threshold=0.6)
                    ]
 
 for processor in post_processors:

@@ -3,10 +3,10 @@ import os
 from copy import deepcopy
 
 import matplotlib.pyplot as plt
+from cvkit.pose_estimation.post_processors.util import ClusterAnalysis
 
-from OptiPose.models.dataset.augmentation import *
-from OptiPose.models.utils import build_batch
-from OptiPose.post_processor_interface import ClusterAnalysisProcess
+from OptiPose.model.dataset.augmentation import *
+from OptiPose.model.utils import build_batch
 
 TEST_FILE_SIZE = 6500
 
@@ -27,14 +27,14 @@ def generate_dataset(root_path, dataset_name, is_test, data_stores: list, total_
     body_parts = data_stores[0].body_parts.copy()
 
     avg_length_list = min_seq_length
-    analysis_processor = ClusterAnalysisProcess()
+    analysis_processor = ClusterAnalysis()
     analysis_processor.PRINT = True
     batch_rows = []
     avg_mask = np.array([0] * len(body_parts))
     total_count = 0
     histogram_list = []
     cluster_counts = []
-    for ds_index,data_store in enumerate(data_stores):
+    for ds_index, data_store in enumerate(data_stores):
         if not data_store.verify_stats():
             print(f'\nAnalyzing File for accurate data points: {ds_index}/{len(data_stores)}')
             analysis_processor.process(data_store)

@@ -1,14 +1,15 @@
 import os
 
-from OptiPose import OptiPoseConfig
-from OptiPose.data_store_interface import FlattenedDataStore
-from OptiPose.models.dataset.generate_dataset import generate_dataset
+from cvkit.pose_estimation.data_readers import FlattenedDataStore
+
+from cvkit.pose_estimation.config import PoseEstimationConfig
+from OptiPose.model.dataset.generate_dataset import generate_dataset
 
 # Download dataset files from https://drive.google.com/drive/folders/1Gg08RiEa-As_lDR5xyBvIjLbp4FEAUt9?usp=sharing
 
 is_test = False
 
-DF3D_config = OptiPoseConfig('./example_configs/DF3D.yml')
+DF3D_config = PoseEstimationConfig('./example_configs/DF3D.yml')
 base_folder = "./DF3D_Files"
 if not is_test:
     csv_files = ['df3d_001.csv', 'df3d_003.csv', 'df3d_006.csv', 'df3d_007.csv', 'df3d_008.csv', 'df3d_009.csv',

@@ -1,12 +1,12 @@
 import numpy as np
 
-from OptiPose import Part
-from OptiPose.data_store_interface import OptiPoseDataStore3D
-from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessor
-from OptiPose.utils import normalize_vector, magnitude
+from cvkit.pose_estimation import Part
+from cvkit.pose_estimation.data_readers import CVKitDataStore3D
+from cvkit.pose_estimation.post_processors.post_prcessor_interface import PostProcessor
+from cvkit.pose_estimation.utils import normalize_vector, magnitude
 
 
-class RayTracerProcess(PostProcessor):
+class RayTracer(PostProcessor):
     PROCESS_NAME = "Ray Tracer"
 
     @staticmethod
@@ -33,7 +33,7 @@ class RayTracerProcess(PostProcessor):
                 direction[2] = direction[2] + abs(direction[2]*elevation_factor)
                 It is used to elevate the direction of looking.
         """
-        super(RayTracerProcess, self).__init__()
+        super(RayTracer, self).__init__()
         self.build_ray = build_ray
         for surface in surface_map:
             vectors = surface_map[surface]
@@ -45,7 +45,7 @@ class RayTracerProcess(PostProcessor):
         self.elevation_factor = elevation_factor
 
     def process(self, data_store):
-        self.data_store = OptiPoseDataStore3D(list(self.surface_map.keys()), None)
+        self.data_store = CVKitDataStore3D(list(self.surface_map.keys()), None)
         self.data_ready = False
         self.progress = 0
         for index, skeleton in data_store.row_iterator():

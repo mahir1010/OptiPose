@@ -2,3 +2,5 @@
 **/__pycache__
 *.pyc
 OptiPose\ Tools
+*.egg-info
+dist

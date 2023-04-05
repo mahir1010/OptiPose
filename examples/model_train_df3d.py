@@ -7,14 +7,14 @@ import pickle
 
 import numpy as np
 import tensorflow as tf
+from cvkit.pose_estimation.metrics.mpjpe import build_mpjpe_metric
+from cvkit.pose_estimation.metrics.pck import build_pck_metric
 
-from OptiPose import OptiPoseConfig
-from OptiPose.models.metrics.MPJPE import build_mpjpe_metric
-from OptiPose.models.metrics.PCK import build_pck_metric
-from OptiPose.models.postural_autoencoder import optipose_postural_autoencoder
-from OptiPose.models.utils import train, build_spatio_temporal_loss
+from cvkit.pose_estimation.config import PoseEstimationConfig
+from OptiPose.model.postural_autoencoder import optipose_postural_autoencoder
+from OptiPose.model.utils import train, build_spatio_temporal_loss
 
-DF3D_config = OptiPoseConfig('./example_configs/DF3D.yml')
+DF3D_config = PoseEstimationConfig('./example_configs/DF3D.yml')
 
 import sys
 

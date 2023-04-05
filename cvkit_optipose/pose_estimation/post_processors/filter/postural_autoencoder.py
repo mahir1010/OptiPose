@@ -1,18 +1,19 @@
 import numpy as np
 
-from OptiPose import OptiPoseConfig, MAGIC_NUMBER
-from OptiPose.models.postural_autoencoder import optipose_postural_autoencoder
-from OptiPose.models.utils import build_batch
-from OptiPose.post_processor_interface import ClusterAnalysisProcess
-from OptiPose.post_processor_interface.PostProcessorInterface import PostProcessor
+from cvkit import MAGIC_NUMBER
+from cvkit.pose_estimation.config import PoseEstimationConfig
+from OptiPose.model.postural_autoencoder import optipose_postural_autoencoder
+from OptiPose.model.utils import build_batch
+from cvkit.pose_estimation.post_processors.util import ClusterAnalysis
+from cvkit.pose_estimation.post_processors.post_prcessor_interface import PostProcessor
 
 
-class SequentialPosturalAutoEncoderProcess(PostProcessor):
+class SequentialPosturalAutoEncoder(PostProcessor):
     PROCESS_NAME = "Sequenctial Postural Auto-Encoder"
 
-    def __init__(self, config: OptiPoseConfig, window_size, n_pcm, n_scm, n_heads, weights, overlap=0, output_dim=64,
+    def __init__(self, config: PoseEstimationConfig, window_size, n_pcm, n_scm, n_heads, weights, overlap=0, output_dim=64,
                  translation_vector=np.array([0, 0, 0])):
-        super(SequentialPosturalAutoEncoderProcess, self).__init__(None)
+        super(SequentialPosturalAutoEncoder, self).__init__(None)
         self.window_size = window_size
         self.config = config
         self.model = optipose_postural_autoencoder(window_size, config.num_parts, n_pcm, n_scm, n_heads,
@@ -62,13 +63,13 @@ class SequentialPosturalAutoEncoderProcess(PostProcessor):
             return None
 
 
-class OccupancyPosturalAutoEncoderProcess(PostProcessor):
+class OccupancyPosturalAutoEncoder(PostProcessor):
     PROCESS_NAME = "Occupancy-Based Postural Auto-Encoder"
 
-    def __init__(self, config: OptiPoseConfig, window_size, n_pcm, n_scm, n_heads, weights, output_dim=64,
+    def __init__(self, config: PoseEstimationConfig, window_size, n_pcm, n_scm, n_heads, weights, output_dim=64,
                  min_window=30,
                  translation_vector=np.array([0, 0, 0])):
-        super(OccupancyPosturalAutoEncoderProcess, self).__init__(None)
+        super(OccupancyPosturalAutoEncoder, self).__init__(None)
         assert min_window < window_size
         self.window_size = window_size
         self.config = config
@@ -82,7 +83,7 @@ class OccupancyPosturalAutoEncoderProcess(PostProcessor):
         if not self.data_store.verify_stats():
             if self.PRINT:
                 print("Generating file statistics")
-            cluster_analysis = ClusterAnalysisProcess()
+            cluster_analysis = ClusterAnalysis()
             cluster_analysis.PRINT = self.PRINT
             cluster_analysis.process(self.data_store)
             self.data_store = cluster_analysis.get_output()
