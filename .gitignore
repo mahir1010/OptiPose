@@ -4,3 +4,4 @@
 OptiPose\ Tools
 *.egg-info
 dist
+reinstall.sh

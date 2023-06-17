@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 from cvkit import MAGIC_NUMBER
 from cvkit.pose_estimation.data_readers import DataStoreInterface
-from cvkit.pose_estimation.post_processors.util import ClusterAnalysis
+from cvkit.pose_estimation.processors.util import ClusterAnalysis
 
 
 @tf.function

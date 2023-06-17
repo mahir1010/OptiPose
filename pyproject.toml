@@ -24,3 +24,7 @@ dependencies = ["bu_cvkit",
 repository = "https://github.com/mahir1010/OptiPose"
 [tool.setuptools]
 packages = ["cvkit_optipose","OptiPose"]
+
+#[tool.setuptools.packages.find]
+#include = ["cvkit_optipose","OptiPose"]  # package names should match these glob patterns (["*"] by default)
+#exclude = ["examples*",'OptiPose Tools*']

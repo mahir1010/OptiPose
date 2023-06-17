@@ -3,7 +3,7 @@ import os
 from copy import deepcopy
 
 import matplotlib.pyplot as plt
-from cvkit.pose_estimation.post_processors.util import ClusterAnalysis
+from cvkit.pose_estimation.processors.util import ClusterAnalysis
 
 from OptiPose.model.dataset.augmentation import *
 from OptiPose.model.utils import build_batch

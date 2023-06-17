@@ -1,7 +1,7 @@
 from cvkit.pose_estimation.data_readers import FlattenedDataStore
-from cvkit.pose_estimation.post_processors.util import *
-from cvkit.pose_estimation.post_processors.filter import *
-from cvkit.pose_estimation.post_processors.generative import *
+from cvkit.pose_estimation.processors.util import *
+from cvkit.pose_estimation.processors.filter import *
+from cvkit.pose_estimation.processors.generative import *
 
 from cvkit.pose_estimation.config import PoseEstimationConfig
 

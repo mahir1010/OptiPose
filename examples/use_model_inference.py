@@ -1,5 +1,5 @@
 from cvkit.pose_estimation.data_readers import FlattenedDataStore
-from cvkit_optipose.pose_estimation.post_processors.filter import SequentialPosturalAutoEncoder
+from cvkit_optipose.pose_estimation.processors.filter import SequentialPosturalAutoEncoder
 
 from OptiPose import OptiPoseConfig
 
