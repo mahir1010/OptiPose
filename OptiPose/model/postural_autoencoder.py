@@ -1,5 +1,4 @@
 import tensorflow as tf
-from cvkit import MAGIC_NUMBER
 from tensorflow.keras.layers import MultiHeadAttention, PReLU, Dense, Reshape, Input, Masking, Concatenate
 
 
@@ -23,6 +22,7 @@ def context_model(index, inp, concat_inp, num_sub_ck, embedding_dims=30, num_hea
 
 
 def optipose_postural_autoencoder(window_size, n_parts, n_pcm, n_scm, multi_heads=1, weights=None):
+    from cvkit import MAGIC_NUMBER
     inputs = Input(shape=(window_size, n_parts, 3))
     inp = Reshape((-1, n_parts * 3))(inputs)
     inp = Masking(mask_value=0)(inp)

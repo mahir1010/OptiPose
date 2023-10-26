@@ -3,13 +3,13 @@ from cvkit import MAGIC_NUMBER
 from cvkit.pose_estimation.config import PoseEstimationConfig
 from cvkit.pose_estimation.processors.processor_interface import Processor, ProcessorMetaData
 from cvkit.pose_estimation.processors.util import ClusterAnalysis
-
 from OptiPose.model.postural_autoencoder import optipose_postural_autoencoder
 from OptiPose.model.utils import build_batch
 import tensorflow as tf
 
 
 class SequentialPosturalAutoEncoder(Processor):
+
     PROCESSOR_NAME = "Sequential Postural Auto-Encoder"
     PROCESSOR_ID = "optipose_sequential"
     META_DATA = {
@@ -37,6 +37,7 @@ class SequentialPosturalAutoEncoder(Processor):
         self.model = None
 
     def process(self, data_store):
+
         batch_size = 1
         self._data_store = data_store
         index = 0
@@ -94,6 +95,7 @@ class OccupancyPosturalAutoEncoder(Processor):
         'max_batch_size': ProcessorMetaData('Max Batch Size', ProcessorMetaData.INT, min_val=1,default=40),
         'weights': ProcessorMetaData('Weights Directory', ProcessorMetaData.DIR_PATH),
         'min_window': ProcessorMetaData('Overlap Window', ProcessorMetaData.INT, default=30, min_val=1)}
+    REQUIRES_STATS = True
 
     def __init__(self, config: PoseEstimationConfig, window_size, n_pcm, n_scm, n_heads, weights,
                  min_window=30,max_batch_size=40,
@@ -126,7 +128,7 @@ class OccupancyPosturalAutoEncoder(Processor):
         self.model = optipose_postural_autoencoder(self.window_size, self.config.num_parts, self.n_pcm, self.n_scm,
                                                    self.n_heads,
                                                    self.weights)
-        occupancy_ranges = [[0.7, 1.0], [0.5, 1.0]]
+        occupancy_ranges = [[0.7, 1.0], [0.5, 1.0], [0.3,1.0]]
         current_occupancy_data = np.array(self._data_store.stats.occupancy_data)
         for occupancy_range in occupancy_ranges:
             if self.PRINT:
@@ -136,11 +138,11 @@ class OccupancyPosturalAutoEncoder(Processor):
             cluster = None
             flag = True
             while flag:
-                print(f'\r{len(clusters)}/{total_length}: {cluster}', end='')
                 if cluster is None or cluster['end'] - cluster['begin'] < self.min_window:
                     if len(clusters) == 0:
                         break
                     cluster = clusters.pop(0)
+                print(f'\r{len(clusters)}/{total_length}: {cluster}', end='')
                 batch = []
                 batch_indices = []
                 for k in range(self.max_batch_size):

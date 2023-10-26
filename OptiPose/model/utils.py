@@ -120,7 +120,7 @@ def build_batch(data_store: DataStoreInterface, begin, end, max_seq_length, is_d
         if is_dataset:
             assert not np.any(np.all(batch[-1] == BLANK, axis=1))
             if truncate:
-                batch[-1] = batch[-1].astype(np.int)
+                batch[-1] = batch[-1].astype(np.integer)
         batch[-1] = batch[-1].tolist()
     if not is_dataset:
         while len(batch) < max_seq_length:

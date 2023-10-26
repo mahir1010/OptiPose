@@ -144,7 +144,7 @@ def random_rigid_transformation(inputs, labels, rotation=0, min_x=-50, max_x=110
 def add_random_noise(inputs, noise_val=15, is_auto_encoder=False):
     rand_max = 10 if not is_auto_encoder else 5
     noise_array = np.array(
-        [[uniform(-noise_val, noise_val), uniform(-noise_val, noise_val), uniform(-noise_val, noise_val)] for i in
+        [normalize_vector([uniform(-1, 1), uniform(-1, 1), uniform(-1, 1)])*noise_val for i in
          range(len(inputs[0]))])
     is_cluster = randint(1, 10) == 1 if not is_auto_encoder else randint(1, 5) == 1
     prob_array = [randint(1, rand_max) == 1 for i in range(len(inputs[0]))]
@@ -157,7 +157,7 @@ def add_random_noise(inputs, noise_val=15, is_auto_encoder=False):
                     inputs[row][col] = (inputs[row][col] + np.array(
                         [uniform(-noise_val, noise_val), uniform(-noise_val, noise_val),
                          uniform(-noise_val, noise_val)])).tolist()
-                elif randint(1, 2) == 1:
+                elif randint(1, rand_max//2) == 1:
                     inputs[row][col] = (
                             inputs[row][col] + np.array([uniform(-1, 1), uniform(-1, 1), uniform(-1, 1)])).tolist()
     return inputs

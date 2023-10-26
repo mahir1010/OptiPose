@@ -7,7 +7,7 @@ from cvkit.pose_estimation.processors.util import ClusterAnalysis
 
 from OptiPose.model.dataset.augmentation import *
 from OptiPose.model.utils import build_batch
-
+import numpy as np
 TEST_FILE_SIZE = 6500
 
 
@@ -38,7 +38,7 @@ def generate_dataset(root_path, dataset_name, is_test, data_stores: list, total_
         if not data_store.verify_stats():
             print(f'\nAnalyzing File for accurate data points: {ds_index}/{len(data_stores)}')
             analysis_processor.process(data_store)
-        c_count, histogram, _ = data_store.stats.get_accurate_cluster_info()
+        c_count, histogram, _ = data_store.stats.get_accurate_cluster_info(max_bin=200)
         cluster_counts.append(c_count)
         histogram_list.append(histogram)
     for histogram in histogram_list[1:]:
@@ -76,17 +76,17 @@ def generate_dataset(root_path, dataset_name, is_test, data_stores: list, total_
                         continue
                     pick = randint(1, 100)
                     is_auto_encoder = False
-                    if pick < 5:
+                    if pick < 15:
                         funct = aug_auto_encoder
                         is_auto_encoder = True
-                    elif pick < 10:
+                    elif pick < 20:
                         funct = aug_alternate_missing
-                    elif pick < 25:
+                    elif pick < 30:
                         funct = aug_sentinals_missing
-                    elif pick < 65:
-                        funct = aug_kp_cluster_missing
-                    elif pick < 75:
+                    elif pick < 40:
                         funct = aug_kp_missing
+                    elif pick < 85:
+                        funct = aug_kp_cluster_missing
                     elif pick <= 100:
                         funct = aug_clusters_missing
                     inputs, mask = funct(deepcopy(labels), BLANK)
@@ -95,8 +95,7 @@ def generate_dataset(root_path, dataset_name, is_test, data_stores: list, total_
                     inputs, labels = random_rigid_transformation(inputs, deepcopy(labels), rotation=r, min_x=min_x,
                                                                  min_y=min_y, max_x=max_x, max_y=max_y,
                                                                  static_scale=scale)
-                    if randint(1, 5) == 1 or is_auto_encoder:
-                        inputs = add_random_noise(inputs, random_noise, is_auto_encoder)
+                    inputs = add_random_noise(inputs, random_noise, is_auto_encoder)
                     avg_length_list = avg_length_list + (len(inputs) - avg_length_list) / (count + 1)
 
                     while len(inputs) != max_seq_length:
