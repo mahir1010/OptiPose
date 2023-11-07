@@ -21,10 +21,10 @@ def distance_map_non_zero(ref, points):
             1e-9 + tf.reduce_sum(tf.keras.backend.square(t - ref))), elems=points)
 
 
-def build_spatio_temporal_loss(spatial_factor=0.0001, temporal_factor=0.0001):
+def build_spatio_temporal_loss(spatial_factor=0.0001, temporal_factor=0.0001,rigidity_weights = 1.0):
     assert spatial_factor <= 1 and temporal_factor <= 1
     huber = tf.keras.losses.Huber()
-
+    rigidity_weights = tf.convert_to_tensor(rigidity_weights,dtype=tf.float32)
     @tf.function
     def loss_fn(y_t_o, y_p):
         y_t = tf.cast(y_t_o, dtype=tf.float32)
@@ -32,7 +32,13 @@ def build_spatio_temporal_loss(spatial_factor=0.0001, temporal_factor=0.0001):
         mask = tf.cast(tf.logical_not(tf.reduce_all(tf.reduce_all(y_t == 0, axis=-1), axis=-1)),
                        dtype=tf.float32)  # bx30
         total = tf.reduce_sum(mask, axis=-1)
-        huber_loss = huber(y_t, y_p)
+        # bx30x20x3
+        euclidean_loss = tf.reduce_sum(tf.sqrt(1e-9 + tf.reduce_sum(tf.square(y_t - y_p), axis=-1)), axis=-1)
+        euclidean_loss = tf.reduce_mean(euclidean_loss)
+        # absolute_loss = tf.reduce_sum(tf.reduce_sum(tf.abs(y_t - y_p), axis=-1), axis=-1)
+        # absolute_loss = tf.reduce_mean(absolute_loss)
+        # huber_loss = huber(y_t,y_p)
+        
         temp = y_p[:, 1:, :, :]
         temp1 = y_t[:, 1:, :, :]
         v_t = tf.vectorized_map(
@@ -42,14 +48,14 @@ def build_spatio_temporal_loss(spatial_factor=0.0001, temporal_factor=0.0001):
             lambda row: tf.vectorized_map(lambda y: tf.vectorized_map(lambda x: distance_map(x, y), elems=y),
                                           elems=row), elems=y_p)
         spatial_loss = tf.reduce_mean(
-            tf.reduce_sum(tf.reduce_mean(tf.reduce_sum(tf.abs(v_t - v_p), axis=-1), axis=-1) * mask,
+            tf.reduce_sum(tf.reduce_mean(tf.reduce_sum(tf.abs(v_t - v_p)*rigidity_weights, axis=-1), axis=-1) * mask,
                           axis=-1) / total)
 
         mask = mask[:, 1:]
         temporal_loss = tf.reduce_mean(tf.reduce_sum(
             tf.reduce_mean(tf.reduce_sum(tf.abs((temp1 - y_t[:, :-1, :, :]) - (temp - y_p[:, :-1, :, :])), axis=-2),
                            axis=-1) * mask, axis=-1) / total)
-        return huber_loss + (spatial_factor * spatial_loss) + (temporal_factor * temporal_loss)
+        return euclidean_loss + (spatial_factor * spatial_loss) + (temporal_factor * temporal_loss)
 
     return loss_fn
 
