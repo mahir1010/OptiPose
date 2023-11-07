@@ -4,7 +4,7 @@ from random import randint, sample, uniform
 import numpy as np
 import scipy
 from cvkit import MAGIC_NUMBER
-
+from cvkit.pose_estimation.utils import normalize_vector
 
 def aug_alternate_missing(dataset, BLANK):
     if randint(1, 2) == 1:
